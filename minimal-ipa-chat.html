@@ -884,6 +884,10 @@
                             <span>Speak all</span>
                         </div>
                         <div class="shortcut-item">
+                            <kbd>Ctrl+Alt+Enter</kbd>
+                            <span>Speak input</span>
+                        </div>
+                        <div class="shortcut-item">
                             <kbd>Ctrl+K</kbd>
                             <span>Clear all</span>
                         </div>
@@ -958,6 +962,7 @@
                 <p>
                     <strong>Ctrl+Enter</strong> - Add message to history<br>
                     <strong>Ctrl+Shift+Enter</strong> - Speak all messages<br>
+                    <strong>Ctrl+Alt+Enter</strong> - Speak current input<br>
                     <strong>Ctrl+K</strong> - Clear all messages<br>
                     <strong>Ctrl+B</strong> - Toggle babble mode (speak & delete)<br>
                     <strong>Ctrl+P</strong> - Toggle speak partial words<br>
@@ -1109,8 +1114,6 @@
 
             const phonemizeUrlEl = document.getElementById('phonemize-url');
             if (phonemizeUrlEl) phonemizeUrlEl.value = settings.phonemizeUrl || '';
-
-            // Load phoneme image map
             if (settings.phonemeImageMap) {
                 try {
                     phonemeImageMap = new Map(Object.entries(settings.phonemeImageMap));
@@ -1179,7 +1182,8 @@
             settings.azureKey = document.getElementById('azure-key').value;
             settings.azureRegion = document.getElementById('azure-region').value;
             settings.voiceName = document.getElementById('voice-dropdown').value;
-            settings.phonemizeUrl = document.getElementById('phonemize-url').value;
+            const phonemizeUrlEl = document.getElementById('phonemize-url');
+            if (phonemizeUrlEl) settings.phonemizeUrl = phonemizeUrlEl.value;
             settings.phonemeImageMap = Object.fromEntries(phonemeImageMap);
             settings.displayMode = displayMode;
 
@@ -2076,7 +2080,9 @@
         inputEl.addEventListener('keydown', (e) => {
             if (e.ctrlKey && e.key === 'Enter') {
                 e.preventDefault();
-                if (e.shiftKey) {
+                if (e.altKey) {
+                    speakCurrentInput();
+                } else if (e.shiftKey) {
                     speakAll();
                 } else {
                     addMessage();
@@ -2150,12 +2156,97 @@
             if (e.target === helpModal) closeHelpModal();
         });
 
-        // Load voices for speech synthesis
-        if ('speechSynthesis' in window) {
-            speechSynthesis.onvoiceschanged = () => {
-                // Voices loaded
-            };
+        // Populate voice dropdown with Azure voices
+        function populateVoiceDropdown(voices) {
+            const dropdown = document.getElementById('voice-dropdown');
+            if (!dropdown) return;
+            const currentVoice = settings.voiceName;
+            dropdown.innerHTML = '';
+
+            const englishVoices = voices.filter(v => v.Locale && v.Locale.startsWith('en-'));
+            const otherVoices = voices.filter(v => v.Locale && !v.Locale.startsWith('en-'));
+
+            if (englishVoices.length > 0) {
+                const optgroup = document.createElement('optgroup');
+                optgroup.label = 'English';
+                englishVoices.forEach(v => {
+                    const opt = document.createElement('option');
+                    opt.value = v.ShortName;
+                    opt.textContent = v.DisplayName + ' (' + v.Locale + ')';
+                    opt.selected = v.ShortName === currentVoice;
+                    optgroup.appendChild(opt);
+                });
+                dropdown.appendChild(optgroup);
+            }
+
+            if (otherVoices.length > 0) {
+                const optgroup = document.createElement('optgroup');
+                optgroup.label = 'Other Languages';
+                otherVoices.forEach(v => {
+                    const opt = document.createElement('option');
+                    opt.value = v.ShortName;
+                    opt.textContent = v.DisplayName + ' (' + v.Locale + ')';
+                    opt.selected = v.ShortName === currentVoice;
+                    optgroup.appendChild(opt);
+                });
+                dropdown.appendChild(optgroup);
+            }
+
+            if (!dropdown.querySelector('option[selected]') && currentVoice) {
+                const opt = document.createElement('option');
+                opt.value = currentVoice;
+                opt.textContent = currentVoice + ' (Custom)';
+                opt.selected = true;
+                dropdown.appendChild(opt);
+            }
         }
+
+        function getDefaultAzureVoices() {
+            return [
+                { ShortName: 'en-GB-SoniaNeural', DisplayName: 'Sonia', Locale: 'en-GB' },
+                { ShortName: 'en-GB-RyanNeural', DisplayName: 'Ryan', Locale: 'en-GB' },
+                { ShortName: 'en-US-JennyNeural', DisplayName: 'Jenny', Locale: 'en-US' },
+                { ShortName: 'en-US-GuyNeural', DisplayName: 'Guy', Locale: 'en-US' },
+                { ShortName: 'en-US-AriaNeural', DisplayName: 'Aria', Locale: 'en-US' },
+                { ShortName: 'en-US-DavisNeural', DisplayName: 'Davis', Locale: 'en-US' },
+                { ShortName: 'en-US-JaneNeural', DisplayName: 'Jane', Locale: 'en-US' },
+                { ShortName: 'en-US-JasonNeural', DisplayName: 'Jason', Locale: 'en-US' },
+                { ShortName: 'en-AU-NatashaNeural', DisplayName: 'Natasha', Locale: 'en-AU' },
+                { ShortName: 'en-AU-WilliamNeural', DisplayName: 'William', Locale: 'en-AU' },
+                { ShortName: 'en-CA-ClaraNeural', DisplayName: 'Clara', Locale: 'en-CA' },
+                { ShortName: 'en-IE-EmilyNeural', DisplayName: 'Emily', Locale: 'en-IE' },
+            ];
+        }
+
+        async function loadAzureVoices() {
+            const dropdown = document.getElementById('voice-dropdown');
+            if (!settings.azureKey || !settings.azureRegion) {
+                populateVoiceDropdown(getDefaultAzureVoices());
+                return;
+            }
+
+            dropdown.innerHTML = '<option value="">Loading voices...</option>';
+
+            try {
+                const response = await fetch(
+                    `https://${settings.azureRegion}.tts.speech.microsoft.com/cognitiveservices/voices/list`,
+                    { headers: { 'Ocp-Apim-Subscription-Key': settings.azureKey } }
+                );
+
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                const voices = await response.json();
+                const neuralVoices = voices.filter(v => v.VoiceType === 'Neural');
+                populateVoiceDropdown(neuralVoices);
+                console.log(`Loaded ${neuralVoices.length} Azure Neural voices`);
+            } catch (error) {
+                console.warn('Failed to load Azure voices, using defaults:', error);
+                populateVoiceDropdown(getDefaultAzureVoices());
+            }
+        }
+
+        // Load voices on init
+        loadAzureVoices();
 
         // Initialize
         loadSettings();
@@ -2201,8 +2292,8 @@
             showMessage(`Display mode: ${displayMode}`);
         });
 
-        // Azure settings - auto-save on change
-        document.getElementById('azure-key').addEventListener('change', function(e) {
+        // Azure settings - auto-save on input (immediate, not waiting for blur)
+        document.getElementById('azure-key').addEventListener('input', function(e) {
             settings.azureKey = e.target.value;
             try {
                 localStorage.setItem('ipa-chat-settings', JSON.stringify(settings));
@@ -2212,7 +2303,13 @@
             }
         });
 
-        document.getElementById('azure-region').addEventListener('change', function(e) {
+        document.getElementById('azure-key').addEventListener('change', function(e) {
+            if (e.target.value) {
+                loadAzureVoices();
+            }
+        });
+
+        document.getElementById('azure-region').addEventListener('input', function(e) {
             settings.azureRegion = e.target.value;
             try {
                 localStorage.setItem('ipa-chat-settings', JSON.stringify(settings));
@@ -2222,11 +2319,29 @@
             }
         });
 
+        document.getElementById('azure-region').addEventListener('change', function(e) {
+            if (settings.azureKey) {
+                loadAzureVoices();
+            }
+        });
+
         // Phoneme file dropdown selector
         document.getElementById('phoneme-file-selector').addEventListener('change', function(e) {
             const filename = e.target.value;
             if (filename) {
                 loadPhonemeFile(filename);
+            }
+        });
+
+        // Voice dropdown - save selection immediately
+        document.getElementById('voice-dropdown').addEventListener('change', function(e) {
+            settings.voiceName = e.target.value;
+            try {
+                localStorage.setItem('ipa-chat-settings', JSON.stringify(settings));
+                updateSettingsStatus();
+                showMessage('Voice: ' + settings.voiceName);
+            } catch (error) {
+                console.error('Failed to save voice:', error);
             }
         });
 
