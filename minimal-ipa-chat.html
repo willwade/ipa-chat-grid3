@@ -946,7 +946,7 @@
             </div>
 
             <!-- IPA word suggestions (small links for Grid 3 to scan) -->
-            <div id="ipa-suggestions" style="display:none; padding:2px 4px; font-size:0.65rem; background:#f0fdf4; border-top:1px solid #bbf7d0; color:#166534; min-height:0; overflow:hidden;"></div>
+            <div id="ipa-suggestions" style="display:none; padding:4px; font-size:0.65rem; background:#f0fdf4; border-top:1px solid #bbf7d0; color:#166534; max-height:40px; overflow-y:auto;"></div>
         </div>
     </div>
 
@@ -1578,6 +1578,12 @@
             showMessage(ipaLookupEnabled ? 'Word lookup ON' : 'Word lookup OFF');
         }
 
+        // Clear IPA suggestions
+        function clearIpaSuggestions() {
+            const el = document.getElementById('ipa-suggestions');
+            if (el) { el.style.display = 'none'; el.innerHTML = ''; }
+        }
+
         // Debounced IPA-to-text lookup - fails silently
         function scheduleIpaLookup(ipa) {
             if (ipaLookupTimer) clearTimeout(ipaLookupTimer);
@@ -1585,22 +1591,40 @@
 
             ipaLookupTimer = setTimeout(async () => {
                 const el = document.getElementById('ipa-suggestions');
-                try {
-                    const response = await fetch(`${PHONEMIZE_URL}/ipa-to-text`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ ipa: ipa.trim() })
-                    });
-                    if (!response.ok) return;
-                    const data = await response.json();
-                    if (data.text && el) {
-                        el.style.display = 'block';
-                        el.innerHTML = '<a href="#" onclick="return false" style="color:#166534;text-decoration:underline;font-size:0.65rem;">' + escapeHtml(data.text) + '</a>';
+                if (!el) return;
+
+                // Split into tokens by spaces
+                const tokens = ipa.trim().split(/\s+/).filter(t => t.length > 0);
+                if (tokens.length === 0) return;
+
+                const results = [];
+                for (const token of tokens) {
+                    try {
+                        const response = await fetch(`${PHONEMIZE_URL}/ipa-to-text`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ ipa: token })
+                        });
+                        if (!response.ok) continue;
+                        const data = await response.json();
+                        if (data.text) {
+                            results.push({ ipa: token, text: data.text });
+                        }
+                    } catch (e) {
+                        // Fail silently
                     }
-                } catch (e) {
-                    // Fail silently - server may be down
                 }
-            }, 400);
+
+                if (results.length > 0) {
+                    el.style.display = 'block';
+                    el.innerHTML = results.map(r =>
+                        '<a href="#" onclick="return false" style="color:#166534;text-decoration:underline;font-size:0.65rem;margin-right:8px;">' + escapeHtml(r.text) + '</a>'
+                    ).join('');
+                } else {
+                    el.style.display = 'none';
+                    el.innerHTML = '';
+                }
+            }, 500);
         }
 
         // Process phoneme image file
@@ -1848,6 +1872,7 @@
             });
 
             inputEl.value = '';
+            clearIpaSuggestions();
             renderMessages();
         }
 
@@ -1971,6 +1996,7 @@
                 if (autoClearAfterSpeak) {
                     messages = [];
                     inputEl.value = '';
+                    clearIpaSuggestions();
                     renderMessages();
                     updatePhonemePreview();
                 }
@@ -2006,6 +2032,7 @@
         window.clearMessages = function() {
             messages = [];
             inputEl.value = '';
+            clearIpaSuggestions();
             renderMessages();
             updatePhonemePreview();
             showMessage('Cleared');
