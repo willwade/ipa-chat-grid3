@@ -44,11 +44,13 @@ The input event listener now includes:
 1. **Babble Mode Logic**: Detects last character, speaks it, clears input
 2. **Partial Word Logic**: Speaks entire current input after each character
 3. **Conflict Resolution**: Modes are mutually exclusive
+4. **Azure Requirement**: Features disabled without Azure TTS API key
 
-### Azure TTS & Browser Synthesis
-Both modes work with:
-- Azure Cognitive Services (if API key provided)
-- Browser speech synthesis (fallback)
+### Azure TTS Requirement
+⚠️ **Important**: AAC features **require** Azure TTS
+- Browser speech synthesis cannot handle IPA phonemes properly
+- Shows error message if Azure TTS is not configured
+- Uses Azure Cognitive Services SSML for proper phoneme pronunciation
 
 ## 📱 UI Changes
 
