@@ -1127,9 +1127,16 @@
             if (phonemeImageMap.size > 0) {
                 statusEl.textContent = `Loaded ${phonemeImageMap.size} phoneme images`;
                 statusEl.style.color = '#4f46e5';
+
+                // Fade out after 3 seconds of successful load
+                setTimeout(() => {
+                    statusEl.style.transition = 'opacity 2s ease-out';
+                    statusEl.style.opacity = '0';
+                }, 3000);
             } else {
                 statusEl.textContent = 'No phoneme image set loaded';
                 statusEl.style.color = '#6b7280';
+                statusEl.style.opacity = '1';
             }
         }
 
@@ -1206,9 +1213,16 @@
                 statusEl.innerHTML = `✅ ${phonemeImageMap.size} phonemes loaded from ${foundFiles[0]}`;
                 statusEl.style.color = '#059669';
                 selector.value = 'webapp-phoneme-mapping.json';
+
+                // Fade out after 3 seconds of successful load
+                setTimeout(() => {
+                    statusEl.style.transition = 'opacity 2s ease-out';
+                    statusEl.style.opacity = '0';
+                }, 3000);
             } else {
                 statusEl.innerHTML = `⚠️ ${phonemeImageMap.size} phonemes loaded - Default file not found`;
                 statusEl.style.color = '#f59e0b';
+                statusEl.style.opacity = '1';
             }
 
             return foundFiles;
