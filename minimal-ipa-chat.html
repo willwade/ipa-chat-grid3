@@ -398,11 +398,12 @@
 
         .hidden-input {
             position: absolute;
-            opacity: 0;
-            height: 0;
-            width: 0;
-            pointer-events: none;
-            /* Keep the input functional but invisible */
+            top: -999px;
+            left: -999px;
+            opacity: 0.01;
+            height: 1px;
+            width: 1px;
+            /* Make it invisible but still functional for keyboard input */
         }
 
         /* Message history */
@@ -793,7 +794,7 @@
             <!-- Grid 3 optimized layout -->
             <div class="grid3-main-area">
                 <!-- Live phoneme preview (main display) -->
-                <div id="phoneme-preview" class="phoneme-preview-main"></div>
+                <div id="phoneme-preview-main" class="phoneme-preview-main"></div>
 
                 <!-- Hidden input but still functional -->
                 <textarea
@@ -801,7 +802,7 @@
                     class="hidden-input"
                     placeholder="Type IPA here..."
                     autofocus
-                    style="position: absolute; opacity: 0; height: 0; width: 0; pointer-events: none;"
+                    style="position: absolute; opacity: 0.01; height: 1px; width: 1px; top: -999px; left: -999px;"
                 ></textarea>
             </div>
 
@@ -2042,12 +2043,8 @@
             });
         }
 
-        // Keep focus on hidden input for Grid 3
-        setInterval(() => {
-            if (document.activeElement !== inputEl && document.activeElement.tagName !== 'BUTTON' && document.activeElement.tagName !== 'SELECT' && document.activeElement.tagName !== 'INPUT') {
-                inputEl.focus();
-            }
-        }, 2000);
+        // Focus hidden input on page load
+        inputEl.focus();
 
         // Dropdown change event listeners (these need addEventListener)
         document.getElementById('display-mode-select').addEventListener('change', function(e) {
