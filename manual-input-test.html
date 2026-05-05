@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manual Input Test - Grid 3</title>
+    <style>
+        body {
+            font-family: system-ui, sans-serif;
+            padding: 20px;
+            background: #f3f4f6;
+        }
+        .test-container {
+            max-width: 400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .grid3-frame {
+            width: 400px;
+            height: 100px;
+            border: 2px solid #4f46e5;
+            border-radius: 8px;
+            margin: 20px 0;
+            position: relative;
+            overflow: hidden;
+            background: white;
+        }
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+        .instructions {
+            background: #dbeafe;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 15px 0;
+            border-left: 4px solid #4f46e5;
+        }
+        .results {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 6px;
+        }
+        .test-step {
+            margin: 10px 0;
+            padding: 10px;
+            background: white;
+            border-radius: 4px;
+            border-left: 3px solid #d1d5db;
+        }
+        .test-step.pass {
+            border-left-color: #10b981;
+        }
+        .test-step.fail {
+            border-left-color: #ef4444;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🧪 Manual Input Test - Grid 3 Layout</h1>
+
+        <div class="instructions">
+            <h3>Test Instructions:</h3>
+            <ol>
+                <li>Wait for the app to load in the frame below (400×100px)</li>
+                <li>Click anywhere in the frame</li>
+                <li>Try typing: <code>h ə l əʊ</code></li>
+                <li>Check if phoneme images appear</li>
+                <li>Report results below</li>
+            </ol>
+        </div>
+
+        <div class="grid3-frame">
+            <iframe id="test-frame" src="http://localhost:8000/minimal-ipa-chat.html"></iframe>
+        </div>
+
+        <div class="results">
+            <h3>Test Results:</h3>
+            <div class="test-step" id="step1">
+                <strong>Step 1:</strong> App loaded in frame?
+                <button onclick="document.getElementById('step1').className='test-step pass'">✅ Pass</button>
+                <button onclick="document.getElementById('step1').className='test-step fail'">❌ Fail</button>
+            </div>
+            <div class="test-step" id="step2">
+                <strong>Step 2:</strong> Can click in frame and focus works?
+                <button onclick="document.getElementById('step2').className='test-step pass'">✅ Pass</button>
+                <button onclick="document.getElementById('step2').className='test-step fail'">❌ Fail</button>
+            </div>
+            <div class="test-step" id="step3">
+                <strong>Step 3:</strong> Can type "h ə l əʊ" and see text?
+                <button onclick="document.getElementById('step3').className='test-step pass'">✅ Pass</button>
+                <button onclick="document.getElementById('step3').className='test-step fail'">❌ Fail</button>
+            </div>
+            <div class="test-step" id="step4">
+                <strong>Step 4:</strong> Phoneme images appear in center?
+                <button onclick="document.getElementById('step4').className='test-step pass'">✅ Pass</button>
+                <button onclick="document.getElementById('step4').className='test-step fail'">❌ Fail</button>
+            </div>
+            <div class="test-step" id="step5">
+                <strong>Step 5:</strong> Input area hidden (not visible)?
+                <button onclick="document.getElementById('step5').className='test-step pass'">✅ Pass</button>
+                <button onclick="document.getElementById('step5').className='test-step fail'">❌ Fail</button>
+            </div>
+        </div>
+
+        <div class="instructions" style="background: #fef3c7; border-left-color: #f59e0b;">
+            <h3>⚠️ If Input Doesn't Work:</h3>
+            <ul>
+                <li><strong>Issue:</strong> <code>pointer-events: none</code> blocked keyboard events</li>
+                <li><strong>Fix:</strong> Changed to <code>opacity: 0.01</code> with proper positioning</li>
+                <li><strong>Issue:</strong> Element ID mismatch (<code>phoneme-preview</code> vs <code>phoneme-preview-main</code>)</li>
+                <li><strong>Fix:</strong> Corrected ID to match JavaScript</li>
+            </ul>
+        </div>
+
+        <button onclick="location.reload()" style="width: 100%; padding: 10px; background: #4f46e5; color: white; border: none; border-radius: 6px; cursor: pointer;">
+            🔄 Reload Test
+        </button>
+    </div>
+
+    <script>
+        console.log('Test page loaded');
+        console.log('Frame will load: http://localhost:8000/minimal-ipa-chat.html');
+        console.log('Grid 3 dimensions: 400×100px');
+    </script>
+</body>
+</html>
