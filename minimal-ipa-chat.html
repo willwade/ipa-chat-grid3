@@ -829,7 +829,6 @@
                 <h1 class="title">IPA Chat <span id="cache-indicator" style="display: none; font-size: 0.6rem; background: #fef3c7; color: #92400e; padding: 2px 6px; border-radius: 10px; margin-left: 4px;">🔄 No Cache</span></h1>
                 <div class="button-group">
                     <button class="button primary" id="speak-all-btn" onclick="speakAll()">🔊</button>
-                    <button class="button" id="speak-input-btn" onclick="speakCurrentInput()" title="Speak current input">🎤</button>
                     <button class="button" id="babble-mode-btn" onclick="toggleBabbleMode()" title="Babble mode">👶</button>
                     <button class="button" id="partial-word-btn" onclick="togglePartialWord()" title="Speak partial words">🔄</button>
                     <button class="button" id="clear-btn" onclick="clearMessages()">🗑️</button>
@@ -881,15 +880,11 @@
                         </div>
                         <div class="shortcut-item">
                             <kbd>Ctrl+Shift+Enter</kbd>
-                            <span>Speak all</span>
-                        </div>
-                        <div class="shortcut-item">
-                            <kbd>Ctrl+Alt+Enter</kbd>
-                            <span>Speak input</span>
+                            <span>Speak &amp; clear</span>
                         </div>
                         <div class="shortcut-item">
                             <kbd>Ctrl+K</kbd>
-                            <span>Clear all</span>
+                            <span>Clear display</span>
                         </div>
                         <div class="shortcut-item">
                             <kbd>Ctrl+B</kbd>
@@ -902,6 +897,10 @@
                         <div class="shortcut-item">
                             <kbd>Ctrl+,</kbd>
                             <span>Settings</span>
+                        </div>
+                        <div class="shortcut-item">
+                            <kbd>Ctrl+L</kbd>
+                            <span>Auto-clear on/off</span>
                         </div>
                         <div class="shortcut-item">
                             <kbd>🖼️</kbd>
@@ -961,12 +960,12 @@
                 <h3>Keyboard Shortcuts</h3>
                 <p>
                     <strong>Ctrl+Enter</strong> - Add message to history<br>
-                    <strong>Ctrl+Shift+Enter</strong> - Speak all messages<br>
-                    <strong>Ctrl+Alt+Enter</strong> - Speak current input<br>
+                    <strong>Ctrl+Shift+Enter</strong> - Speak and clear display<br>
                     <strong>Ctrl+K</strong> - Clear all messages<br>
                     <strong>Ctrl+B</strong> - Toggle babble mode (speak & delete)<br>
                     <strong>Ctrl+P</strong> - Toggle speak partial words<br>
                     <strong>Ctrl+,</strong> - Open settings<br>
+                <strong>Ctrl+L</strong> - Toggle auto-clear after speaking<br>
                     <strong>Escape</strong> - Close modals
                 </p>
 
@@ -1034,6 +1033,7 @@
         // AAC Mode toggles
         let babbleMode = false; // Speak each phoneme immediately, then delete it
         let speakPartialWord = false; // Speak accumulated text after each phoneme
+        let autoClearAfterSpeak = true; // Auto-clear display after speaking
 
         // DOM elements - will be initialized in DOMContentLoaded
         let historyEl, inputEl, errorMessageEl, speakingIndicatorEl;
@@ -1550,6 +1550,12 @@
             }
         }
 
+        // Toggle auto-clear after speaking
+        window.toggleAutoClear = function() {
+            autoClearAfterSpeak = !autoClearAfterSpeak;
+            showMessage(autoClearAfterSpeak ? 'Auto-clear ON' : 'Auto-clear OFF');
+        }
+
         // Process phoneme image file
         function processPhonemeFile(file) {
             const reader = new FileReader();
@@ -1886,15 +1892,16 @@
             }
         }
 
-        // Speak all messages
+        // Speak all messages (or current input if no messages), then clear display
         window.speakAll = async function() {
-            if (messages.length === 0) {
-                showError('No messages to speak');
+            const inputText = inputEl.value.trim();
+
+            if (messages.length === 0 && !inputText) {
+                showError('Nothing to speak');
                 return;
             }
 
             if (isSpeaking) {
-                // Stop speaking
                 speechSynthesis.cancel();
                 isSpeaking = false;
                 speakingIndicatorEl.classList.remove('active');
@@ -1905,8 +1912,20 @@
             speakingIndicatorEl.classList.add('active');
 
             try {
-                for (const message of messages) {
-                    await speakMessage(message);
+                if (messages.length > 0) {
+                    for (const message of messages) {
+                        await speakMessage(message);
+                    }
+                } else if (inputText) {
+                    await speakMessage({ text: inputText });
+                }
+
+                // Auto-clear display after speaking (if enabled)
+                if (autoClearAfterSpeak) {
+                    messages = [];
+                    inputEl.value = '';
+                    renderMessages();
+                    updatePhonemePreview();
                 }
             } catch (error) {
                 showError(error.message);
@@ -1936,11 +1955,13 @@
             }
         };
 
-        // Clear all messages
+        // Clear all messages and display
         window.clearMessages = function() {
             messages = [];
+            inputEl.value = '';
             renderMessages();
-            showMessage('Messages cleared');
+            updatePhonemePreview();
+            showMessage('Cleared');
         };
 
         // Delete specific message
@@ -2080,9 +2101,7 @@
         inputEl.addEventListener('keydown', (e) => {
             if (e.ctrlKey && e.key === 'Enter') {
                 e.preventDefault();
-                if (e.altKey) {
-                    speakCurrentInput();
-                } else if (e.shiftKey) {
+                if (e.shiftKey) {
                     speakAll();
                 } else {
                     addMessage();
@@ -2145,6 +2164,11 @@
             if (e.ctrlKey && e.key === 'p') {
                 e.preventDefault();
                 togglePartialWord();
+            }
+            // Ctrl+L for toggle auto-clear
+            if (e.ctrlKey && e.key === 'l') {
+                e.preventDefault();
+                toggleAutoClear();
             }
         });
 
