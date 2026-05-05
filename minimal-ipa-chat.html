@@ -271,7 +271,6 @@
 
         /* Phoneme preview - horizontal strip */
         /* OLD PREVIEW CSS - No longer used in Grid 3 layout */
-        }
 
         /* Status bar - minimal */
         .status-bar {
@@ -1036,7 +1035,7 @@
         let settingsModal, helpModal, voiceDropdownEl;
 
         // Header toggle functionality
-        function toggleSettings() {
+        window.toggleSettings = function() {
             const settingsBar = document.getElementById('settings-bar');
             settingsBar.classList.toggle('visible');
             const toggleBtn = document.getElementById('settings-toggle-btn');
@@ -1452,7 +1451,7 @@
         }
 
         // Cycle through display modes
-        function cycleDisplayMode() {
+        window.cycleDisplayMode = function() {
             const modes = ['text', 'images', 'both'];
             const currentIndex = modes.indexOf(displayMode);
             displayMode = modes[(currentIndex + 1) % modes.length];
@@ -1476,7 +1475,7 @@
         }
 
         // Toggle babble mode - speak each phoneme immediately, then delete it
-        function toggleBabbleMode() {
+        window.toggleBabbleMode = function() {
             if (!settings.azureKey) {
                 showError('👶 Babble mode requires Azure TTS - Please add API key in settings');
                 return;
@@ -1512,7 +1511,7 @@
         }
 
         // Toggle speak partial word - speak accumulated text after each phoneme
-        function togglePartialWord() {
+        window.togglePartialWord = function() {
             if (!settings.azureKey) {
                 showError('🔄 Speak partial words requires Azure TTS - Please add API key in settings');
                 return;
@@ -1544,45 +1543,6 @@
                     }
                 });
                 showMessage('Speak partial words OFF');
-            }
-        }
-
-        // Speak the current input content
-        async function speakCurrentInput() {
-            const input = document.getElementById('input');
-            const text = input.value.trim();
-            if (!text) return;
-
-            if (!settings.azureKey) {
-                showError('🎤 AAC features require Azure TTS - Please add API key in settings');
-                return;
-            }
-
-            try {
-                const response = await fetch(settings.phonemizeUrl + '/speak', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        text: text,
-                        voice: settings.voiceName,
-                        azureKey: settings.azureKey,
-                        azureRegion: settings.azureRegion
-                    })
-                });
-
-                if (response.ok) {
-                    const blob = await response.blob();
-                    const audio = new Audio(URL.createObjectURL(blob));
-                    audio.play();
-                    showMessage(`🎤 Spoke: "${text}"`);
-                } else {
-                    throw new Error('Azure TTS request failed');
-                }
-            } catch (error) {
-                console.error('Failed to speak:', error);
-                showError('Failed to speak - Check Azure TTS settings');
             }
         }
 
@@ -1923,7 +1883,7 @@
         }
 
         // Speak all messages
-        async function speakAll() {
+        window.speakAll = async function() {
             if (messages.length === 0) {
                 showError('No messages to speak');
                 return;
@@ -1950,14 +1910,34 @@
                 isSpeaking = false;
                 speakingIndicatorEl.classList.remove('active');
             }
-        }
+        };
+
+        // Speak the current input content
+        window.speakCurrentInput = async function() {
+            const input = document.getElementById('input');
+            const text = input.value.trim();
+            if (!text) return;
+
+            if (!settings.azureKey) {
+                showError('🎤 AAC features require Azure TTS - Please add API key in settings');
+                return;
+            }
+
+            try {
+                await speakWithAzure(text);
+                showMessage(`🎤 Spoke: "${text}"`);
+            } catch (error) {
+                console.error('Failed to speak:', error);
+                showError('Failed to speak - Check Azure TTS settings');
+            }
+        };
 
         // Clear all messages
-        function clearMessages() {
+        window.clearMessages = function() {
             messages = [];
             renderMessages();
             showMessage('Messages cleared');
-        }
+        };
 
         // Delete specific message
         function deleteMessage(id) {
@@ -2129,42 +2109,14 @@
 
                 // Speak the phoneme using Azure TTS
                 try {
-                    const response = await fetch(settings.phonemizeUrl + '/speak', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            text: lastChar,
-                            voice: settings.voiceName,
-                            azureKey: settings.azureKey,
-                            azureRegion: settings.azureRegion
-                        })
-                    });
-                    if (response.ok) {
-                        const blob = await response.blob();
-                        const audio = new Audio(URL.createObjectURL(blob));
-                        audio.play();
-                    }
+                    await speakWithAzure(lastChar);
                 } catch (error) {
                     console.error('Babble mode failed:', error);
                 }
             } else if (speakPartialWord && currentValue.length > 0) {
                 // Speak partial word: Speak everything entered so far
                 try {
-                    const response = await fetch(settings.phonemizeUrl + '/speak', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            text: currentValue,
-                            voice: settings.voiceName,
-                            azureKey: settings.azureKey,
-                            azureRegion: settings.azureRegion
-                        })
-                    });
-                    if (response.ok) {
-                        const blob = await response.blob();
-                        const audio = new Audio(URL.createObjectURL(blob));
-                        audio.play();
-                    }
+                    await speakWithAzure(currentValue);
                 } catch (error) {
                     console.error('Speak partial word failed:', error);
                 }
@@ -2280,6 +2232,35 @@
 
         // Note: Input event listeners are already set up above in the main DOMContentLoaded block
     });
+
+    // Fallback: Ensure speakCurrentInput is defined (with debug logging)
+    console.log('Checking speakCurrentInput function...');
+    console.log('Before check - typeof window.speakCurrentInput:', typeof window.speakCurrentInput);
+
+    if (typeof window.speakCurrentInput !== 'function') {
+        console.log('❌ speakCurrentInput NOT defined - defining it now');
+        window.speakCurrentInput = async function() {
+            const input = document.getElementById('input');
+            const text = input.value.trim();
+            if (!text) return;
+
+            if (!settings.azureKey) {
+                showError('🎤 AAC features require Azure TTS - Please add API key in settings');
+                return;
+            }
+
+            try {
+                await speakWithAzure(text);
+                showMessage(`🎤 Spoke: "${text}"`);
+            } catch (error) {
+                console.error('Failed to speak:', error);
+                showError('Failed to speak - Check Azure TTS settings');
+            }
+        };
+        console.log('✅ speakCurrentInput defined successfully');
+    } else {
+        console.log('✅ speakCurrentInput already defined');
+    }
     </script>
 </body>
 </html>
