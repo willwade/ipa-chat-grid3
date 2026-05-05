@@ -188,46 +188,7 @@
         }
 
         /* Phoneme preview - horizontal strip */
-        .phoneme-preview {
-            display: flex;
-            gap: 0.25rem;
-            padding: 0.25rem;
-            min-height: 32px;
-            background: #f8f9fa;
-            border-top: 1px solid #e2e8f0;
-            overflow-x: auto;
-            align-items: center;
-        }
-
-        .preview-phoneme {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            background: white;
-            border: 1px solid #e2e8f0;
-            border-radius: 0.25rem;
-            padding: 0.1rem;
-            min-width: 24px;
-        }
-
-        .preview-phoneme img {
-            width: 20px;
-            height: 20px;
-            object-fit: contain;
-        }
-
-        .preview-phoneme .ipa-label {
-            font-size: 0.5rem;
-            font-family: 'Doulos SIL', monospace;
-            color: #1f2937;
-            margin-top: 0.05rem;
-            font-weight: 500;
-        }
-
-        .preview-text {
-            color: #6b7280;
-            font-size: 0.6rem;
-            padding: 0.1rem;
+        /* OLD PREVIEW CSS - No longer used in Grid 3 layout */
         }
 
         /* Status bar - minimal */
@@ -387,6 +348,61 @@
 
         .button.primary:hover {
             background: #4338ca;
+        }
+
+        /* Grid 3 optimized layout */
+        .grid3-main-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 60px;
+            position: relative;
+        }
+
+        .phoneme-preview-main {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            gap: 6px;
+            padding: 8px;
+            min-height: 50px;
+            width: 100%;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 2px solid #e5e7eb;
+            position: relative;
+        }
+
+        .phoneme-preview-main:focus-within {
+            border-color: #4f46e5;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+
+        .phoneme-preview-main .phoneme-with-image {
+            transform: scale(1.3); /* Make phonemes larger for Grid 3 visibility */
+            margin: 2px;
+        }
+
+        .phoneme-preview-main .phoneme-with-image img {
+            width: 28px;
+            height: 28px;
+        }
+
+        .phoneme-preview-main .phoneme-with-image span {
+            font-size: 0.5rem;
+            font-weight: 600;
+        }
+
+        .hidden-input {
+            position: absolute;
+            opacity: 0;
+            height: 0;
+            width: 0;
+            pointer-events: none;
+            /* Keep the input functional but invisible */
         }
 
         /* Message history */
@@ -774,19 +790,23 @@
                 </div>
             </div>
 
-            <!-- Message history -->
-            <div class="history" id="history"></div>
+            <!-- Grid 3 optimized layout -->
+            <div class="grid3-main-area">
+                <!-- Live phoneme preview (main display) -->
+                <div id="phoneme-preview" class="phoneme-preview-main"></div>
 
-            <!-- Input area -->
-            <div class="input-area">
+                <!-- Hidden input but still functional -->
                 <textarea
                     id="input"
+                    class="hidden-input"
                     placeholder="Type IPA here..."
                     autofocus
+                    style="position: absolute; opacity: 0; height: 0; width: 0; pointer-events: none;"
                 ></textarea>
-                <!-- Live phoneme preview -->
-                <div id="phoneme-preview" class="phoneme-preview"></div>
             </div>
+
+            <!-- Message history (hidden in Grid 3, shown in larger views) -->
+            <div class="history" id="history" style="display: none;"></div>
 
             <!-- Status bar -->
             <div class="status-bar">
@@ -1257,54 +1277,17 @@
 
         // Update live phoneme preview as user types
         function updatePhonemePreview() {
-            const previewEl = document.getElementById('phoneme-preview');
+            const previewEl = document.getElementById('phoneme-preview-main');
             const text = inputEl.value.trim();
 
             if (!text || phonemeImageMap.size === 0) {
-                previewEl.innerHTML = '<div class="preview-text">Start typing to see phoneme images...</div>';
+                previewEl.innerHTML = '<div class="preview-text" style="color: #9ca3af; font-size: 0.75rem;">Start typing IPA...</div>';
                 return;
             }
 
-            // Create slash-free phoneme map
-            const phonemeMapWithoutSlashes = new Map();
-            phonemeImageMap.forEach((imagePath, phoneme) => {
-                const phonemeWithoutSlashes = phoneme.replace(/\//g, '');
-                phonemeMapWithoutSlashes.set(phonemeWithoutSlashes, imagePath);
-            });
-
-            let result = '';
-            let remainingText = text;
-
-            // Sort phonemes by length (longest first)
-            const sortedPhonemes = Array.from(phonemeMapWithoutSlashes.keys())
-                .sort((a, b) => b.length - a.length);
-
-            while (remainingText.length > 0) {
-                let matched = false;
-
-                for (const phoneme of sortedPhonemes) {
-                    if (remainingText.startsWith(phoneme)) {
-                        const imagePath = phonemeMapWithoutSlashes.get(phoneme);
-                        result += `
-                            <div class="preview-phoneme">
-                                <img src="${imagePath}" alt="${phoneme}" onerror="this.parentElement.style.display='none'">
-                                <div class="ipa-label">${phoneme}</div>
-                            </div>
-                        `;
-                        remainingText = remainingText.substring(phoneme.length);
-                        matched = true;
-                        break;
-                    }
-                }
-
-                if (!matched) {
-                    // Show unmatched characters as text
-                    result += `<div class="preview-text">${escapeHtml(remainingText[0])}</div>`;
-                    remainingText = remainingText.substring(1);
-                }
-            }
-
-            previewEl.innerHTML = result;
+            // Use the same rendering logic as message display
+            const renderedText = renderTextWithPhonemes(text);
+            previewEl.innerHTML = renderedText;
         }
 
         // Update display mode button
@@ -2050,6 +2033,21 @@
         window.toggleBabbleMode = toggleBabbleMode;
         window.togglePartialWord = togglePartialWord;
         window.speakCurrentInput = speakCurrentInput;
+
+        // Grid 3: Auto-focus hidden input and handle clicks on preview area
+        const previewMain = document.getElementById('phoneme-preview-main');
+        if (previewMain) {
+            previewMain.addEventListener('click', () => {
+                inputEl.focus();
+            });
+        }
+
+        // Keep focus on hidden input for Grid 3
+        setInterval(() => {
+            if (document.activeElement !== inputEl && document.activeElement.tagName !== 'BUTTON' && document.activeElement.tagName !== 'SELECT' && document.activeElement.tagName !== 'INPUT') {
+                inputEl.focus();
+            }
+        }, 2000);
 
         // Dropdown change event listeners (these need addEventListener)
         document.getElementById('display-mode-select').addEventListener('change', function(e) {
