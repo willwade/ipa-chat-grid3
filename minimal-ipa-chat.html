@@ -1,0 +1,1936 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IPA Chat for Grid 3</title>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Doulos+SIL&display=swap" rel="stylesheet">
+    <style>
+        /* Base styles - Ultra compact for Grid 3 */
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: #f8f9fa;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .container {
+            max-width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .ipa-chat {
+            background: white;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Ultra compact header */
+        .header {
+            background: #4f46e5;
+            color: white;
+            padding: 0.25rem 0.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            min-height: 24px;
+        }
+
+        .title {
+            font-size: 0.7rem;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 0.25rem;
+        }
+
+        .button {
+            background: white;
+            color: #4f46e5;
+            border: none;
+            padding: 0.2rem 0.4rem;
+            border-radius: 0.2rem;
+            cursor: pointer;
+            font-size: 0.65rem;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+
+        .button:hover {
+            background: #f3f4f6;
+        }
+
+        .button.primary {
+            background: #fbbf24;
+            color: #1f2937;
+        }
+
+        .button.active {
+            background: #fbbf24;
+            color: #1f2937;
+        }
+
+        /* Settings grid - always visible */
+        .settings-bar {
+            background: #f3f4f6;
+            padding: 0.25rem;
+            border-bottom: 1px solid #e5e7eb;
+            display: none;
+        }
+
+        .settings-bar.visible {
+            display: block;
+        }
+
+        .settings-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+            gap: 0.25rem;
+        }
+
+        .setting-item {
+            background: white;
+            border: 1px solid #d1d5db;
+            border-radius: 0.2rem;
+            padding: 0.25rem;
+            text-align: center;
+            font-size: 0.6rem;
+        }
+
+        .setting-item label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 0.1rem;
+            color: #374151;
+        }
+
+        .setting-item select,
+        .setting-item input {
+            width: 100%;
+            padding: 0.1rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.1rem;
+            font-size: 0.6rem;
+        }
+
+        /* Message history - minimal */
+        .history {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0.25rem;
+            background: white;
+            min-height: 40px;
+            max-height: 80px;
+        }
+
+        .message {
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.25rem;
+            padding: 0.25rem;
+            margin-bottom: 0.25rem;
+            font-size: 0.75rem;
+        }
+
+        .message-text {
+            font-family: 'Doulos SIL', monospace;
+            word-wrap: break-word;
+        }
+
+        .message-actions {
+            display: flex;
+            gap: 0.25rem;
+            margin-top: 0.25rem;
+        }
+
+        .icon-button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 0.7rem;
+            padding: 0.1rem;
+            opacity: 0.7;
+        }
+
+        .icon-button:hover {
+            opacity: 1;
+        }
+
+        /* Input area - super compact */
+        .input-area {
+            background: white;
+            border-top: 1px solid #e2e8f0;
+            padding: 0.25rem;
+        }
+
+        textarea {
+            width: 100%;
+            height: 24px;
+            resize: none;
+            border: 1px solid #d1d5db;
+            border-radius: 0.2rem;
+            padding: 0.25rem;
+            font-family: 'JetBrains Mono', 'Doulos SIL', monospace;
+            font-size: 0.75rem;
+            outline: none;
+        }
+
+        /* Phoneme preview - horizontal strip */
+        .phoneme-preview {
+            display: flex;
+            gap: 0.25rem;
+            padding: 0.25rem;
+            min-height: 32px;
+            background: #f8f9fa;
+            border-top: 1px solid #e2e8f0;
+            overflow-x: auto;
+            align-items: center;
+        }
+
+        .preview-phoneme {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.25rem;
+            padding: 0.1rem;
+            min-width: 24px;
+        }
+
+        .preview-phoneme img {
+            width: 20px;
+            height: 20px;
+            object-fit: contain;
+        }
+
+        .preview-phoneme .ipa-label {
+            font-size: 0.5rem;
+            font-family: 'Doulos SIL', monospace;
+            color: #1f2937;
+            margin-top: 0.05rem;
+            font-weight: 500;
+        }
+
+        .preview-text {
+            color: #6b7280;
+            font-size: 0.6rem;
+            padding: 0.1rem;
+        }
+
+        /* Status bar - minimal */
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.1rem 0.25rem;
+            font-size: 0.6rem;
+            color: #6b7280;
+            background: #f9fafb;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .speaking-indicator {
+            display: none;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .speaking-indicator.active {
+            display: flex;
+        }
+
+        .speaking-dot {
+            width: 6px;
+            height: 6px;
+            background: #22c55e;
+            border-radius: 50%;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Phoneme images in messages */
+        .phoneme-image {
+            width: 24px;
+            height: 24px;
+            object-fit: contain;
+            vertical-align: middle;
+        }
+
+        .phoneme-with-image {
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0 3px;
+            vertical-align: top;
+        }
+
+        .phoneme-with-image img {
+            width: 24px;
+            height: 24px;
+            margin-bottom: 2px;
+        }
+
+        .phoneme-with-image span {
+            font-size: 0.4rem;
+            line-height: 1;
+            color: #374151;
+        }
+
+        /* Error messages */
+        #error-message {
+            background: #fee2e2;
+            color: #991b1b;
+            padding: 0.25rem;
+            font-size: 0.65rem;
+            display: none;
+        }
+
+        #error-message.visible {
+            display: block;
+        }
+
+        /* Success messages */
+        #success-message {
+            background: #d1fae5;
+            color: #065f46;
+            padding: 0.25rem;
+            font-size: 0.65rem;
+            display: none;
+        }
+
+        #success-message.visible {
+            display: block;
+        }
+
+        /* Hide modals - not used in Grid 3 version */
+        .modal {
+            display: none !important;
+        }
+
+        .title {
+            font-size: 0.875rem;
+            font-weight: 500;
+            margin: 0;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 0.25rem;
+        }
+
+        .settings-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .settings-actions .button {
+            flex: 1;
+        }
+
+        .header-toggle {
+            display: none;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            padding: 0.25rem;
+            cursor: pointer;
+            font-size: 0.75rem;
+            color: #6b7280;
+            background: #f8f9fa;
+        }
+
+        .header-toggle:hover {
+            background: #e2e8f0;
+        }
+
+        .button {
+            background: none;
+            border: 1px solid #e2e8f0;
+            padding: 0.375rem 0.75rem;
+            border-radius: 0.25rem;
+            cursor: pointer;
+            font-size: 0.75rem;
+        }
+
+        .button:hover {
+            background: #f8f9fa;
+        }
+
+        .button:focus {
+            outline: 2px solid #4f46e5;
+            outline-offset: 1px;
+        }
+
+        .button.primary {
+            background: #4f46e5;
+            color: white;
+            border-color: #4f46e5;
+        }
+
+        .button.primary:hover {
+            background: #4338ca;
+        }
+
+        /* Message history */
+        .history {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            max-height: 200px;
+            overflow-y: auto;
+            padding-right: 0.5rem;
+        }
+
+        .history::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .history::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+
+        .history::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+
+        .history::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+
+        .message {
+            border-bottom: 1px solid #e2e8f0;
+            padding: 0.5rem;
+        }
+
+        .message.active {
+            background: rgba(79, 70, 229, 0.05);
+        }
+
+        .message-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .message-text {
+            font-family: 'JetBrains Mono', 'Doulos SIL', monospace;
+            font-size: 1rem;
+            flex: 1;
+            line-height: 1.5;
+        }
+
+        .phoneme-image {
+            display: inline-block;
+            vertical-align: top;
+            margin: 0 2px;
+            max-height: 2em;
+            max-width: 2em;
+            object-fit: contain;
+        }
+
+        .mixed-content {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: flex-start;
+            gap: 4px;
+        }
+
+        .phoneme-with-image {
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+            padding: 2px 4px;
+            background: rgba(79, 70, 229, 0.1);
+            border-radius: 4px;
+        }
+
+        .phoneme-with-image img {
+            max-width: 24px;
+            max-height: 24px;
+        }
+
+        .phoneme-with-image span {
+            font-size: 0.5rem;
+            line-height: 1;
+        }
+
+        .display-mode-controls {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .display-mode-btn {
+            flex: 1;
+            padding: 0.5rem;
+            border: 1px solid #e2e8f0;
+            background: white;
+            cursor: pointer;
+            font-size: 0.75rem;
+            border-radius: 0.25rem;
+        }
+
+        .display-mode-btn.active {
+            background: #4f46e5;
+            color: white;
+            border-color: #4f46e5;
+        }
+
+        .message-actions {
+            display: flex;
+            gap: 0.25rem;
+        }
+
+        .icon-button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0.25rem;
+            opacity: 0.6;
+            font-size: 1rem;
+        }
+
+        .icon-button:hover {
+            opacity: 1;
+        }
+
+        /* Input area */
+        .input-area {
+            position: relative;
+            background: white;
+            padding: 0.5rem;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        textarea {
+            width: 100%;
+            resize: none;
+            border: none;
+            padding: 0.5rem;
+            font-family: 'JetBrains Mono', 'Doulos SIL', monospace;
+            font-size: 1rem;
+            outline: none;
+            background: transparent;
+            min-height: 60px;
+        }
+
+        /* Live phoneme preview */
+        .phoneme-preview {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            padding: 0.5rem;
+            min-height: 80px;
+            background: #f8f9fa;
+            border-top: 1px solid #e2e8f0;
+            align-items: center;
+        }
+
+        .preview-phoneme {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.5rem;
+            padding: 0.5rem;
+            min-width: 70px;
+        }
+
+        .preview-phoneme img {
+            width: 50px;
+            height: 50px;
+            object-fit: contain;
+        }
+
+        .preview-phoneme .ipa-label {
+            font-size: 0.875rem;
+            font-family: 'Doulos SIL', monospace;
+            color: #1f2937;
+            margin-top: 0.25rem;
+            font-weight: 500;
+        }
+
+        .preview-text {
+            color: #6b7280;
+            font-size: 0.875rem;
+            padding: 0.25rem 0.5rem;
+        }
+
+        /* Status bar */
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem;
+            font-size: 0.75rem;
+            color: #6b7280;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .keyboard-hint {
+            font-family: monospace;
+        }
+
+        /* Speaking indicator */
+        .speaking-indicator {
+            display: none;
+            align-items: center;
+            gap: 0.5rem;
+            color: #4f46e5;
+        }
+
+        .speaking-indicator.active {
+            display: flex;
+        }
+
+        .speaking-dot {
+            width: 8px;
+            height: 8px;
+            background: #4f46e5;
+            border-radius: 50%;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        /* Error message */
+        .error-message {
+            color: #dc2626;
+            font-size: 0.875rem;
+            padding: 0.5rem;
+            background: rgba(220, 38, 38, 0.05);
+            border-radius: 0.375rem;
+            margin-bottom: 0.5rem;
+            display: none;
+        }
+
+        .error-message.visible {
+            display: block;
+        }
+
+        /* Settings modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            overflow-y: auto;
+            padding: 1rem;
+        }
+
+        .modal-content {
+            position: relative;
+            background-color: white;
+            margin: 10vh auto;
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .modal-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        .close-button {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.25rem;
+            line-height: 1;
+        }
+
+        .setting-group {
+            margin-bottom: 1rem;
+        }
+
+        .setting-label {
+            display: block;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+        }
+
+        .setting-input {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+        }
+
+        .setting-input:focus {
+            outline: 2px solid #4f46e5;
+            outline-offset: 1px;
+        }
+
+        select.setting-input {
+            cursor: pointer;
+        }
+
+        select.setting-input option {
+            padding: 0.5rem;
+        }
+
+        select.setting-input option:focus {
+            background: #4f46e5;
+            color: white;
+        }
+
+        .help-content {
+            line-height: 1.5;
+            font-size: 0.875rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="ipa-chat">
+            <!-- Ultra compact header -->
+            <div class="header">
+                <h1 class="title">IPA Chat</h1>
+                <div class="button-group">
+                    <button class="button primary" id="speak-all-btn" onclick="speakAll()">🔊</button>
+                    <button class="button" id="clear-btn" onclick="clearMessages()">🗑️</button>
+                    <button class="button" id="settings-toggle-btn" onclick="toggleSettings()">⚙️</button>
+                    <button class="button" id="display-mode-btn" onclick="cycleDisplayMode()">🖼️</button>
+                </div>
+            </div>
+
+            <!-- Settings grid bar -->
+            <div class="settings-bar" id="settings-bar">
+                <div class="settings-grid">
+                    <div class="setting-item">
+                        <label>Voice</label>
+                        <select id="voice-dropdown">
+                            <option value="">Loading...</option>
+                        </select>
+                    </div>
+                    <div class="setting-item">
+                        <label>Display</label>
+                        <select id="display-mode-select">
+                            <option value="text">Text</option>
+                            <option value="images">Images</option>
+                            <option value="both" selected>Both</option>
+                        </select>
+                    </div>
+                    <div class="setting-item">
+                        <label>Phonemes</label>
+                        <select id="phoneme-file-selector">
+                            <option value="">Loading...</option>
+                        </select>
+                    </div>
+                    <div class="setting-item">
+                        <label>Azure Key</label>
+                        <input type="password" id="azure-key" placeholder="Optional">
+                    </div>
+                    <div class="setting-item">
+                        <label>Region</label>
+                        <input type="text" id="azure-region" placeholder="eastus">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Message history -->
+            <div class="history" id="history"></div>
+
+            <!-- Input area -->
+            <div class="input-area">
+                <textarea
+                    id="input"
+                    placeholder="Type IPA here..."
+                    autofocus
+                ></textarea>
+                <!-- Live phoneme preview -->
+                <div id="phoneme-preview" class="phoneme-preview"></div>
+            </div>
+
+            <!-- Status bar -->
+            <div class="status-bar">
+                <div class="speaking-indicator" id="speaking-indicator">
+                    <div class="speaking-dot"></div>
+                    <span>Speaking...</span>
+                </div>
+                <div id="phoneme-status">No phonemes loaded</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Messages -->
+    <div id="error-message"></div>
+    <div id="success-message"></div>
+
+    <!-- REMOVED: Duplicate settings modal - was causing ID conflicts and JavaScript errors -->
+
+    <!-- Help Modal -->
+    <div id="help-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Help</h2>
+                <button class="close-button" id="close-help">&times;</button>
+            </div>
+            <div class="help-content">
+                <h3>Keyboard Shortcuts</h3>
+                <p>
+                    <strong>Ctrl+Enter</strong> - Add message to history<br>
+                    <strong>Ctrl+Shift+Enter</strong> - Speak all messages<br>
+                    <strong>Ctrl+K</strong> - Clear all messages<br>
+                    <strong>Ctrl+,</strong> - Open settings<br>
+                    <strong>Escape</strong> - Close modals
+                </p>
+
+                <h3>IPA Support</h3>
+                <p>Type IPA text directly (no slashes needed): <code>hələʊ</code> or <code>h æ t</code>. See live phoneme images as you type!</p>
+
+                <h3>Phoneme Images</h3>
+                <p><strong>Live Preview:</strong> See phoneme images appear as you type! No need to press Enter.</p>
+
+                <p><strong>Display Modes:</strong> Click the 🖼️ button to cycle through:</p>
+                <ul>
+                    <li><strong>🖼️ Text:</strong> Show IPA text only</li>
+                    <li><strong>📝 Images:</strong> Show phoneme images only</li>
+                    <li><strong>🔄 Both:</strong> Show both text and images</li>
+                </ul>
+
+                <p><strong>Image File Formats:</strong></p>
+                <p><strong>CSV Format:</strong></p>
+                <pre>IPA,ImagePath
+/h/,phonemes/h.png
+/æ/,phonemes/ae.png
+/l/,phonemes/l.png
+/əʊ/,phonemes/ou.png</pre>
+
+                <p><strong>JSON Format:</strong></p>
+                <pre>[
+  {"ipa": "/h/", "image": "phonemes/h.png"},
+  {"ipa": "/æ/", "image": "phonemes/ae.png"},
+  {"ipa": "/l/", "image": "phonemes/l.png"},
+  {"ipa": "/əʊ/", "image": "phonemes/ou.png"}
+]</pre>
+
+                <p><strong>Note:</strong> You can use IPA with or without slashes in your mappings. Both work!</p>
+
+                <p><strong>Image Paths:</strong> Use relative paths from the HTML file location. Images will be loaded relative to the web app location.</p>
+
+                <h3>Configuration</h3>
+                <p>Click Settings to configure your Azure TTS API credentials and upload phoneme image files. Without credentials, the app will attempt to use browser speech synthesis.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // State
+        let messages = [];
+        let settings = {
+            azureKey: '',
+            azureRegion: 'uksouth',
+            voiceName: 'en-GB-SoniaNeural',
+            phonemizeUrl: 'https://dolphin-app-62ztl.ondigitalocean.app'
+        };
+        let isSpeaking = false;
+        let voiceDropdownSearchTerm = '';
+        let previousFocusedElement = null;
+        let phonemeImageMap = new Map(); // Maps IPA text to image paths
+        let displayMode = 'both'; // 'text', 'images', 'both' - default to both for Grid 3
+
+        // DOM elements - will be initialized in DOMContentLoaded
+        let historyEl, inputEl, errorMessageEl, speakingIndicatorEl;
+        let settingsModal, helpModal, voiceDropdownEl;
+
+        // Header toggle functionality
+        function toggleSettings() {
+            const settingsBar = document.getElementById('settings-bar');
+            settingsBar.classList.toggle('visible');
+            const toggleBtn = document.getElementById('settings-toggle-btn');
+
+            if (settingsBar.classList.contains('visible')) {
+                toggleBtn.classList.add('active');
+                toggleBtn.textContent = '❌ Close';
+            } else {
+                toggleBtn.classList.remove('active');
+                toggleBtn.textContent = '⚙️';
+            }
+        }
+
+        function toggleHeader() {
+            // Not used in compact Grid 3 version
+        }
+
+        // REMOVED: Broken code referencing undefined headerToggleEl
+        // This was causing JavaScript errors that prevented settings toggle from working
+
+        // REMOVED: voiceDropdownEl event listener - moved to DOMContentLoaded
+        // Voice dropdown search functionality will be set up after DOM is ready
+
+        // Update settings status indicator
+        function updateSettingsStatus() {
+            const settingsCount = document.getElementById('settings-count');
+            if (!settingsCount) return; // Skip if element doesn't exist (compact version)
+
+            let count = 0;
+
+            if (settings.azureKey) count++;
+            if (settings.azureRegion) count++;
+            if (settings.voiceName) count++;
+            if (settings.phonemizeUrl) count++;
+            if (phonemeImageMap.size > 0) count++;
+            if (settings.displayMode) count++;
+
+            settingsCount.textContent = count;
+
+            // Visual feedback based on number of settings
+            const statusIndicator = document.getElementById('settings-status');
+            if (count >= 4) {
+                statusIndicator.style.color = '#4f46e5'; // Blue - well configured
+            } else if (count >= 2) {
+                statusIndicator.style.color = '#6b7280'; // Gray - partially configured
+            } else {
+                statusIndicator.style.color = '#9ca3af'; // Light gray - minimal config
+            }
+        }
+
+        // Load settings from localStorage
+        function loadSettings() {
+            const saved = localStorage.getItem('ipa-chat-settings');
+            if (saved) {
+                try {
+                    settings = { ...settings, ...JSON.parse(saved) };
+                    console.log('Settings loaded from localStorage:', Object.keys(settings).length, 'items');
+                } catch (e) {
+                    console.error('Failed to load settings:', e);
+                }
+            } else {
+                console.log('No saved settings found in localStorage');
+            }
+
+            // Populate settings fields (with defensive checks for compact version)
+            const azureKeyEl = document.getElementById('azure-key');
+            if (azureKeyEl) azureKeyEl.value = settings.azureKey || '';
+
+            const azureRegionEl = document.getElementById('azure-region');
+            if (azureRegionEl) azureRegionEl.value = settings.azureRegion || '';
+
+            const phonemizeUrlEl = document.getElementById('phonemize-url');
+            if (phonemizeUrlEl) phonemizeUrlEl.value = settings.phonemizeUrl || '';
+
+            // Load phoneme image map
+            if (settings.phonemeImageMap) {
+                try {
+                    phonemeImageMap = new Map(Object.entries(settings.phonemeImageMap));
+                    updatePhonemeStatus();
+                    updatePhonemePreview();
+
+                    // Set dropdown to previously selected file
+                    if (settings.selectedPhonemeFile) {
+                        const selector = document.getElementById('phoneme-file-selector');
+                        selector.value = settings.selectedPhonemeFile;
+                    }
+                } catch (e) {
+                    console.error('Failed to load phoneme image map:', e);
+                }
+            }
+
+            // Auto-load default phoneme mapping if no mappings are loaded
+            if (phonemeImageMap.size === 0) {
+                autoLoadPhonemeMapping().then(() => {
+                    updatePhonemePreview();
+                });
+            } else {
+                // Even if we have mappings, still detect available files for the dropdown
+                detectPhonemeFiles().then(() => {
+                    // Restore selected file in dropdown
+                    if (settings.selectedPhonemeFile) {
+                        const selector = document.getElementById('phoneme-file-selector');
+                        selector.value = settings.selectedPhonemeFile;
+                    }
+                });
+            }
+
+            // Load display mode
+            if (settings.displayMode) {
+                displayMode = settings.displayMode;
+                updateDisplayModeButton();
+            }
+
+            // Set voice dropdown
+            const voiceDropdown = document.getElementById('voice-dropdown');
+            // Check if current voice is in the list
+            let voiceFound = false;
+            for (let i = 0; i < voiceDropdown.options.length; i++) {
+                if (voiceDropdown.options[i].value === settings.voiceName) {
+                    voiceDropdown.selectedIndex = i;
+                    voiceFound = true;
+                    break;
+                }
+            }
+
+            // If not found, add it as a custom option
+            if (!voiceFound && settings.voiceName) {
+                const customOption = document.createElement('option');
+                customOption.value = settings.voiceName;
+                customOption.textContent = settings.voiceName + ' (Custom)';
+                voiceDropdown.add(customOption);
+                voiceDropdown.selectedIndex = voiceDropdown.options.length - 1;
+            }
+
+            // Update settings status indicator
+            updateSettingsStatus();
+        }
+
+        // Save settings to localStorage
+        function saveSettings() {
+            settings.azureKey = document.getElementById('azure-key').value;
+            settings.azureRegion = document.getElementById('azure-region').value;
+            settings.voiceName = document.getElementById('voice-dropdown').value;
+            settings.phonemizeUrl = document.getElementById('phonemize-url').value;
+            settings.phonemeImageMap = Object.fromEntries(phonemeImageMap);
+            settings.displayMode = displayMode;
+
+            try {
+                localStorage.setItem('ipa-chat-settings', JSON.stringify(settings));
+                console.log('Settings saved to localStorage');
+                closeSettingsModal();
+                showMessage('Settings saved successfully');
+                updateSettingsStatus();
+                renderMessages(); // Re-render with new settings
+            } catch (error) {
+                console.error('Failed to save settings:', error);
+                showError('Failed to save settings: ' + error.message);
+            }
+        }
+
+        // Update phoneme status display
+        function updatePhonemeStatus() {
+            const statusEl = document.getElementById('phoneme-status');
+            if (phonemeImageMap.size > 0) {
+                statusEl.textContent = `Loaded ${phonemeImageMap.size} phoneme images`;
+                statusEl.style.color = '#4f46e5';
+            } else {
+                statusEl.textContent = 'No phoneme image set loaded';
+                statusEl.style.color = '#6b7280';
+            }
+        }
+
+        // Auto-load default phoneme mapping file
+        // Detect if running under file:// protocol
+        function isFileProtocol() {
+            return window.location.protocol === 'file:';
+        }
+
+        // Detect available phoneme mapping files
+        async function detectPhonemeFiles() {
+            const possibleFiles = [
+                'webapp-phoneme-mapping.json',
+                'webapp-phoneme-mapping.csv',
+                'accurate-phoneme-mapping.json',
+                'accurate-phoneme-mapping.csv',
+                'phoneme-image-mapping.json',
+                'phoneme-image-mapping.csv',
+                'trial-ipa-mapping.json',
+                'trial-ipa-mapping.csv',
+                'sample-phonemes-from-gridset.json',
+                'sample-phonemes-from-gridset.csv',
+                'sample-phonemes.json',
+                'sample-phonemes.csv'
+            ];
+
+            const selector = document.getElementById('phoneme-file-selector');
+            const statusEl = document.getElementById('phoneme-status');
+
+            if (!selector) {
+                console.warn('Phoneme file selector not found!');
+                return [];
+            }
+
+            // Always populate the dropdown with all possible files first
+            selector.innerHTML = '';
+
+            possibleFiles.forEach(filename => {
+                const option = document.createElement('option');
+                option.value = filename;
+                option.textContent = filename;
+                selector.appendChild(option);
+            });
+
+            // Add a "Select a file..." option at the top
+            const defaultOption = document.createElement('option');
+            defaultOption.value = '';
+            defaultOption.textContent = 'Select a file...';
+            selector.insertBefore(defaultOption, selector.firstChild);
+
+            // Only check for the main file to avoid console spam
+            let foundFiles = [];
+            try {
+                // Try HEAD request first (faster and doesn't download content)
+                let response = await fetch('webapp-phoneme-mapping.json', { method: 'HEAD' });
+                if (response.ok) {
+                    foundFiles.push('webapp-phoneme-mapping.json');
+                }
+            } catch (error) {
+                // Silently ignore - file might not exist
+                try {
+                    // Fallback to GET if HEAD fails
+                    let response = await fetch('webapp-phoneme-mapping.json');
+                    if (response.ok) {
+                        foundFiles.push('webapp-phoneme-mapping.json');
+                    }
+                } catch (e) {
+                    // File definitely doesn't exist, continue
+                }
+            }
+
+            // Update status based on what we found
+            if (foundFiles.length > 0) {
+                statusEl.innerHTML = `✅ ${phonemeImageMap.size} phonemes loaded from ${foundFiles[0]}`;
+                statusEl.style.color = '#059669';
+                selector.value = 'webapp-phoneme-mapping.json';
+            } else {
+                statusEl.innerHTML = `⚠️ ${phonemeImageMap.size} phonemes loaded - Default file not found`;
+                statusEl.style.color = '#f59e0b';
+            }
+
+            return foundFiles;
+        }
+
+        async function autoLoadPhonemeMapping() {
+            try {
+                // First, populate the dropdown with available files
+                await detectPhonemeFiles();
+
+                // Then try to load the default file directly
+                const response = await fetch('webapp-phoneme-mapping.json');
+                if (response.ok) {
+                    const data = await response.json();
+                    if (Array.isArray(data)) {
+                        data.forEach(item => {
+                            if (item.ipa && item.image) {
+                                phonemeImageMap.set(item.ipa.trim(), item.image.trim());
+                            }
+                        });
+                        console.log(`✅ Auto-loaded ${phonemeImageMap.size} phoneme mappings from webapp-phoneme-mapping.json`);
+                        updatePhonemeStatus();
+                        updateSettingsStatus();
+
+                        // Save to localStorage for persistence
+                        settings.phonemeImageMap = Object.fromEntries(phonemeImageMap);
+                        try {
+                            localStorage.setItem('ipa-chat-settings', JSON.stringify(settings));
+                        } catch (e) {
+                            console.warn('Could not save auto-loaded mappings to localStorage:', e);
+                        }
+
+                        // Update the dropdown to show the loaded file
+                        const selector = document.getElementById('phoneme-file-selector');
+                        if (selector) {
+                            selector.value = 'webapp-phoneme-mapping.json';
+                        }
+
+                        return; // Success - exit function
+                    }
+                }
+            } catch (error) {
+                console.log('ℹ️ No auto-loaded phoneme mapping found (will detect available files)');
+            }
+        }
+
+        // Load a specific phoneme mapping file
+        async function loadPhonemeFile(filename) {
+            if (!filename) return;
+
+            try {
+                const response = await fetch(filename);
+                if (!response.ok) throw new Error(`Failed to load ${filename}`);
+
+                const content = await response.text();
+                let newMap = new Map();
+
+                if (filename.endsWith('.json')) {
+                    const data = JSON.parse(content);
+                    if (Array.isArray(data)) {
+                        data.forEach(item => {
+                            if (item.ipa && item.image) {
+                                newMap.set(item.ipa.trim(), item.image.trim());
+                            }
+                        });
+                    }
+                } else if (filename.endsWith('.csv')) {
+                    const lines = content.split('\n');
+                    lines.forEach(line => {
+                        const parts = line.split(',');
+                        if (parts.length >= 2) {
+                            const ipa = parts[0].trim();
+                            const imagePath = parts[1].trim();
+                            if (ipa && imagePath) {
+                                newMap.set(ipa, imagePath);
+                            }
+                        }
+                    });
+                }
+
+                if (newMap.size > 0) {
+                    phonemeImageMap = newMap;
+                    updatePhonemeStatus();
+                    updateSettingsStatus();
+                    updatePhonemePreview();
+                    showMessage(`Loaded ${newMap.size} phoneme images from ${filename}`);
+
+                    // Save to settings
+                    settings.phonemeImageMap = Object.fromEntries(phonemeImageMap);
+                    settings.selectedPhonemeFile = filename;
+                    try {
+                        localStorage.setItem('ipa-chat-settings', JSON.stringify(settings));
+                    } catch (e) {
+                        console.warn('Could not save settings:', e);
+                    }
+                } else {
+                    showError('No valid phoneme mappings found in file');
+                }
+            } catch (error) {
+                if (isFileProtocol()) {
+                    const statusEl = document.getElementById('phoneme-status');
+                    statusEl.innerHTML = `⚠️ <strong>File system限制:</strong> Browser blocks local file access.<br>
+                    🚀 <strong>Solution:</strong> Run a local server:<br>
+                    <code style="background:#f3f4f6;padding:2px 6px;border-radius:3px;font-size:0.7rem;">python -m http.server 8000</code><br>
+                    Then open: <code>http://localhost:8000/minimal-ipa-chat.html</code>`;
+                    statusEl.style.color = '#dc2626';
+                } else {
+                    showError(`Error loading ${filename}: ${error.message}`);
+                }
+            }
+        }
+
+        // Update live phoneme preview as user types
+        function updatePhonemePreview() {
+            const previewEl = document.getElementById('phoneme-preview');
+            const text = inputEl.value.trim();
+
+            if (!text || phonemeImageMap.size === 0) {
+                previewEl.innerHTML = '<div class="preview-text">Start typing to see phoneme images...</div>';
+                return;
+            }
+
+            // Create slash-free phoneme map
+            const phonemeMapWithoutSlashes = new Map();
+            phonemeImageMap.forEach((imagePath, phoneme) => {
+                const phonemeWithoutSlashes = phoneme.replace(/\//g, '');
+                phonemeMapWithoutSlashes.set(phonemeWithoutSlashes, imagePath);
+            });
+
+            let result = '';
+            let remainingText = text;
+
+            // Sort phonemes by length (longest first)
+            const sortedPhonemes = Array.from(phonemeMapWithoutSlashes.keys())
+                .sort((a, b) => b.length - a.length);
+
+            while (remainingText.length > 0) {
+                let matched = false;
+
+                for (const phoneme of sortedPhonemes) {
+                    if (remainingText.startsWith(phoneme)) {
+                        const imagePath = phonemeMapWithoutSlashes.get(phoneme);
+                        result += `
+                            <div class="preview-phoneme">
+                                <img src="${imagePath}" alt="${phoneme}" onerror="this.parentElement.style.display='none'">
+                                <div class="ipa-label">${phoneme}</div>
+                            </div>
+                        `;
+                        remainingText = remainingText.substring(phoneme.length);
+                        matched = true;
+                        break;
+                    }
+                }
+
+                if (!matched) {
+                    // Show unmatched characters as text
+                    result += `<div class="preview-text">${escapeHtml(remainingText[0])}</div>`;
+                    remainingText = remainingText.substring(1);
+                }
+            }
+
+            previewEl.innerHTML = result;
+        }
+
+        // Update display mode button
+        function updateDisplayModeButton() {
+            const btn = document.getElementById('display-mode-btn');
+            const modeText = {
+                'text': '🖼️ Text',
+                'images': '📝 Images',
+                'both': '🔄 Both'
+            };
+            btn.textContent = modeText[displayMode] || '🖼️ Text';
+        }
+
+        // Cycle through display modes
+        function cycleDisplayMode() {
+            const modes = ['text', 'images', 'both'];
+            const currentIndex = modes.indexOf(displayMode);
+            displayMode = modes[(currentIndex + 1) % modes.length];
+
+            // Update the select dropdown
+            const displaySelect = document.getElementById('display-mode-select');
+            displaySelect.value = displayMode;
+
+            updateDisplayModeButton();
+            settings.displayMode = displayMode;
+
+            try {
+                localStorage.setItem('ipa-chat-settings', JSON.stringify(settings));
+                updateSettingsStatus();
+            } catch (error) {
+                console.error('Failed to save display mode:', error);
+            }
+
+            renderMessages(); // Re-render with new display mode
+            showMessage(`Display mode: ${displayMode}`);
+        }
+
+        // Process phoneme image file
+        function processPhonemeFile(file) {
+            const reader = new FileReader();
+
+            reader.onload = function(e) {
+                try {
+                    const content = e.target.result;
+                    let newMap = new Map();
+
+                    if (file.name.endsWith('.json')) {
+                        // Process JSON file
+                        const data = JSON.parse(content);
+                        if (Array.isArray(data)) {
+                            data.forEach(item => {
+                                if (item.ipa && item.image) {
+                                    newMap.set(item.ipa.trim(), item.image.trim());
+                                }
+                            });
+                        }
+                    } else if (file.name.endsWith('.csv')) {
+                        // Process CSV file
+                        const lines = content.split('\n');
+                        lines.forEach(line => {
+                            const parts = line.split(',');
+                            if (parts.length >= 2) {
+                                const ipa = parts[0].trim();
+                                const imagePath = parts[1].trim();
+                                if (ipa && imagePath) {
+                                    newMap.set(ipa, imagePath);
+                                }
+                            }
+                        });
+                    }
+
+                    if (newMap.size > 0) {
+                        phonemeImageMap = newMap;
+                        updatePhonemeStatus();
+                        updateSettingsStatus();
+                        updatePhonemePreview();
+                        showMessage(`Loaded ${newMap.size} phoneme images`);
+                    } else {
+                        showError('No valid phoneme mappings found in file');
+                    }
+                } catch (error) {
+                    showError('Error processing file: ' + error.message);
+                }
+            };
+
+            reader.readAsText(file);
+        }
+
+        // Export settings to JSON file
+        function exportSettings() {
+            const settingsToExport = {
+                ...settings,
+                phonemeImageMap: Object.fromEntries(phonemeImageMap),
+                exportDate: new Date().toISOString(),
+                version: '1.0'
+            };
+
+            const dataStr = JSON.stringify(settingsToExport, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(dataBlob);
+
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `ipa-chat-settings-${new Date().toISOString().slice(0,10)}.json`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+
+            showMessage('Settings exported successfully');
+        }
+
+        // Import settings from JSON file
+        function importSettings(file) {
+            const reader = new FileReader();
+
+            reader.onload = function(e) {
+                try {
+                    const importedSettings = JSON.parse(e.target.result);
+
+                    // Validate basic structure
+                    if (!importedSettings.version) {
+                        throw new Error('Invalid settings file format');
+                    }
+
+                    // Merge with current settings
+                    settings = {
+                        azureKey: importedSettings.azureKey || '',
+                        azureRegion: importedSettings.azureRegion || 'uksouth',
+                        voiceName: importedSettings.voiceName || 'en-GB-SoniaNeural',
+                        phonemizeUrl: importedSettings.phonemizeUrl || 'https://dolphin-app-62ztl.ondigitalocean.app',
+                        displayMode: importedSettings.displayMode || 'text',
+                        phonemeImageMap: importedSettings.phonemeImageMap || {}
+                    };
+
+                    // Update phoneme image map
+                    if (importedSettings.phonemeImageMap) {
+                        phonemeImageMap = new Map(Object.entries(importedSettings.phonemeImageMap));
+                        updatePhonemeStatus();
+                    }
+
+                    // Update display mode
+                    if (importedSettings.displayMode) {
+                        displayMode = importedSettings.displayMode;
+                        updateDisplayModeButton();
+                    }
+
+                    // Save to localStorage
+                    localStorage.setItem('ipa-chat-settings', JSON.stringify(settings));
+
+                    // Update UI
+                    document.getElementById('azure-key').value = settings.azureKey || '';
+                    document.getElementById('azure-region').value = settings.azureRegion || '';
+                    document.getElementById('phonemize-url').value = settings.phonemizeUrl || '';
+
+                    // Update voice dropdown
+                    const voiceDropdown = document.getElementById('voice-dropdown');
+                    let voiceFound = false;
+                    for (let i = 0; i < voiceDropdown.options.length; i++) {
+                        if (voiceDropdown.options[i].value === settings.voiceName) {
+                            voiceDropdown.selectedIndex = i;
+                            voiceFound = true;
+                            break;
+                        }
+                    }
+
+                    if (!voiceFound && settings.voiceName) {
+                        const customOption = document.createElement('option');
+                        customOption.value = settings.voiceName;
+                        customOption.textContent = settings.voiceName + ' (Custom)';
+                        voiceDropdown.add(customOption);
+                        voiceDropdown.selectedIndex = voiceDropdown.options.length - 1;
+                    }
+
+                    updateSettingsStatus();
+                    renderMessages();
+
+                    showMessage('Settings imported successfully');
+
+                } catch (error) {
+                    showError('Error importing settings: ' + error.message);
+                }
+            };
+
+            reader.readAsText(file);
+        }
+
+        // Convert text with phoneme images (works with or without slashes)
+        function renderTextWithPhonemes(text) {
+            if (phonemeImageMap.size === 0 || displayMode === 'text') {
+                return escapeHtml(text);
+            }
+
+            let result = '';
+            let remainingText = text;
+
+            // Sort phonemes by length (longest first) to handle overlapping matches
+            let sortedPhonemes = Array.from(phonemeImageMap.keys())
+                .sort((a, b) => b.length - a.length);
+
+            // Remove slashes from phonemes for matching (e.g., /h/ → h)
+            const phonemeMapWithoutSlashes = new Map();
+            phonemeImageMap.forEach((imagePath, phoneme) => {
+                const phonemeWithoutSlashes = phoneme.replace(/\//g, '');
+                phonemeMapWithoutSlashes.set(phonemeWithoutSlashes, imagePath);
+                phonemeMapWithoutSlashes.set(phoneme, imagePath); // Keep both versions
+            });
+
+            // Combine original and slash-free phonemes
+            const allPhonemes = [...new Set([...sortedPhonemes, ...Array.from(phonemeMapWithoutSlashes.keys())])]
+                .sort((a, b) => b.length - a.length);
+
+            let processed = false;
+            while (remainingText.length > 0) {
+                let matched = false;
+
+                for (const phoneme of allPhonemes) {
+                    if (remainingText.startsWith(phoneme)) {
+                        const imagePath = phonemeMapWithoutSlashes.get(phoneme.replace(/\//g, '')) || phonemeImageMap.get(phoneme);
+                        if (!imagePath) continue;
+
+                        const escapedPhoneme = escapeHtml(phoneme.replace(/\//g, ''));
+
+                        if (displayMode === 'images') {
+                            result += `<img src="${imagePath}" class="phoneme-image" alt="${escapedPhoneme}" title="${escapedPhoneme}">`;
+                        } else if (displayMode === 'both') {
+                            result += `<span class="phoneme-with-image">
+                                <img src="${imagePath}" class="phoneme-image" alt="${escapedPhoneme}">
+                                <span>${escapedPhoneme}</span>
+                            </span>`;
+                        }
+
+                        remainingText = remainingText.substring(phoneme.length);
+                        matched = true;
+                        processed = true;
+                        break;
+                    }
+                }
+
+                if (!matched) {
+                    // No match found, add the character and continue
+                    result += escapeHtml(remainingText[0]);
+                    remainingText = remainingText.substring(1);
+                }
+            }
+
+            return result;
+        }
+
+        // Show error message
+        function showError(message) {
+            errorMessageEl.textContent = message;
+            errorMessageEl.classList.add('visible');
+            setTimeout(() => {
+                errorMessageEl.classList.remove('visible');
+            }, 5000);
+        }
+
+        // Show temporary message
+        function showMessage(message) {
+            errorMessageEl.textContent = message;
+            errorMessageEl.classList.remove('error-message');
+            errorMessageEl.style.color = '#4f46e5';
+            errorMessageEl.classList.add('visible');
+            setTimeout(() => {
+                errorMessageEl.classList.remove('visible');
+                errorMessageEl.style.color = '';
+            }, 3000);
+        }
+
+        // Add message to history
+        function addMessage() {
+            const text = inputEl.value.trim();
+            if (!text) return;
+
+            messages.push({
+                id: Date.now(),
+                text: text,
+                timestamp: new Date().toLocaleTimeString()
+            });
+
+            inputEl.value = '';
+            renderMessages();
+        }
+
+        // Convert IPA to speech using Azure TTS
+        async function speakWithAzure(text) {
+            if (!settings.azureKey) {
+                throw new Error('Azure TTS API key not configured');
+            }
+
+            const ssml = `<speak version='1.0' xml:lang='en-US' xmlns='http://www.w3.org/2001/10/synthesis'>
+                <voice name='${settings.voiceName}'>
+                    <phoneme alphabet='ipa' ph='${text.replace(/[\/\[\]]/g, '')}'>${text}</phoneme>
+                </voice>
+            </speak>`;
+
+            const response = await fetch(`https://${settings.azureRegion}.tts.speech.microsoft.com/cognitiveservices/v1`, {
+                method: 'POST',
+                headers: {
+                    'Ocp-Apim-Subscription-Key': settings.azureKey,
+                    'Content-Type': 'application/ssml+xml',
+                    'X-Microsoft-OutputFormat': 'audio-16khz-128kbitrate-mono-mp3'
+                },
+                body: ssml
+            });
+
+            if (!response.ok) {
+                throw new Error(`Azure TTS error: ${response.status}`);
+            }
+
+            const audioBlob = await response.blob();
+            const audioUrl = URL.createObjectURL(audioBlob);
+            const audio = new Audio(audioUrl);
+
+            return new Promise((resolve, reject) => {
+                audio.onended = () => {
+                    URL.revokeObjectURL(audioUrl);
+                    resolve();
+                };
+                audio.onerror = (error) => {
+                    URL.revokeObjectURL(audioUrl);
+                    reject(error);
+                };
+                audio.play();
+            });
+        }
+
+        // Fallback to browser speech synthesis
+        function speakWithBrowser(text) {
+            return new Promise((resolve, reject) => {
+                if (!('speechSynthesis' in window)) {
+                    reject(new Error('Speech synthesis not supported'));
+                    return;
+                }
+
+                // Clean IPA notation for browser TTS
+                const cleanText = text.replace(/[\/\[\]]/g, '');
+
+                const utterance = new SpeechSynthesisUtterance(cleanText);
+                utterance.onend = resolve;
+                utterance.onerror = reject;
+
+                // Try to find a good English voice
+                const voices = speechSynthesis.getVoices();
+                const englishVoice = voices.find(v => v.lang.startsWith('en-GB')) ||
+                                   voices.find(v => v.lang.startsWith('en-'));
+                if (englishVoice) {
+                    utterance.voice = englishVoice;
+                }
+
+                speechSynthesis.speak(utterance);
+            });
+        }
+
+        // Speak a single message
+        async function speakMessage(message) {
+            try {
+                if (settings.azureKey) {
+                    await speakWithAzure(message.text);
+                } else {
+                    await speakWithBrowser(message.text);
+                }
+            } catch (error) {
+                console.warn('Primary TTS failed, trying fallback:', error);
+                try {
+                    await speakWithBrowser(message.text);
+                } catch (fallbackError) {
+                    throw new Error(`Speech synthesis failed: ${fallbackError.message}`);
+                }
+            }
+        }
+
+        // Speak all messages
+        async function speakAll() {
+            if (messages.length === 0) {
+                showError('No messages to speak');
+                return;
+            }
+
+            if (isSpeaking) {
+                // Stop speaking
+                speechSynthesis.cancel();
+                isSpeaking = false;
+                speakingIndicatorEl.classList.remove('active');
+                return;
+            }
+
+            isSpeaking = true;
+            speakingIndicatorEl.classList.add('active');
+
+            try {
+                for (const message of messages) {
+                    await speakMessage(message);
+                }
+            } catch (error) {
+                showError(error.message);
+            } finally {
+                isSpeaking = false;
+                speakingIndicatorEl.classList.remove('active');
+            }
+        }
+
+        // Clear all messages
+        function clearMessages() {
+            messages = [];
+            renderMessages();
+            showMessage('Messages cleared');
+        }
+
+        // Delete specific message
+        function deleteMessage(id) {
+            messages = messages.filter(m => m.id !== id);
+            renderMessages();
+        }
+
+        // Speak specific message
+        async function speakSingleMessage(id) {
+            const message = messages.find(m => m.id === id);
+            if (message) {
+                try {
+                    speakingIndicatorEl.classList.add('active');
+                    await speakMessage(message);
+                } catch (error) {
+                    showError(error.message);
+                } finally {
+                    speakingIndicatorEl.classList.remove('active');
+                }
+            }
+        }
+
+        // Render messages
+        function renderMessages() {
+            historyEl.innerHTML = '';
+
+            messages.forEach(message => {
+                const div = document.createElement('div');
+                div.className = 'message';
+                const renderedText = renderTextWithPhonemes(message.text);
+
+                div.innerHTML = `
+                    <div class="message-content">
+                        <div class="message-text">${renderedText}</div>
+                        <div class="message-actions">
+                            <button class="icon-button" onclick="speakSingleMessage(${message.id})" title="Speak">🔊</button>
+                            <button class="icon-button" onclick="deleteMessage(${message.id})" title="Delete">🗑️</button>
+                        </div>
+                    </div>
+                `;
+                historyEl.appendChild(div);
+            });
+
+            // Scroll to bottom
+            historyEl.scrollTop = historyEl.scrollHeight;
+        }
+
+        // Escape HTML to prevent XSS
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Modal functions with focus management
+        function openSettingsModal() {
+            previousFocusedElement = document.activeElement;
+            settingsModal.style.display = 'block';
+
+            // Focus first input field
+            setTimeout(() => {
+                document.getElementById('azure-key').focus();
+            }, 100);
+        }
+
+        function closeSettingsModal() {
+            settingsModal.style.display = 'none';
+
+            // Return focus to previous element
+            if (previousFocusedElement) {
+                previousFocusedElement.focus();
+            }
+        }
+
+        function openHelpModal() {
+            helpModal.style.display = 'block';
+        }
+
+        function closeHelpModal() {
+            helpModal.style.display = 'none';
+        }
+
+        // Trap focus in settings modal
+        function trapFocus(element) {
+            const focusableElements = element.querySelectorAll(
+                'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+            );
+            const firstFocusable = focusableElements[0];
+            const lastFocusable = focusableElements[focusableElements.length - 1];
+
+            element.addEventListener('keydown', (e) => {
+                if (e.key === 'Tab') {
+                    if (e.shiftKey) {
+                        if (document.activeElement === firstFocusable) {
+                            e.preventDefault();
+                            lastFocusable.focus();
+                        }
+                    } else {
+                        if (document.activeElement === lastFocusable) {
+                            e.preventDefault();
+                            firstFocusable.focus();
+                        }
+                    }
+                }
+            });
+        }
+
+        // ============================================
+        // MAIN INITIALIZATION - after DOM is ready
+        // ============================================
+        document.addEventListener('DOMContentLoaded', function() {
+        // Initialize DOM element references
+        historyEl = document.getElementById('history');
+        inputEl = document.getElementById('input');
+        errorMessageEl = document.getElementById('error-message');
+        speakingIndicatorEl = document.getElementById('speaking-indicator');
+        settingsModal = document.getElementById('settings-modal'); // Not used in compact version
+        helpModal = document.getElementById('help-modal'); // Not used in compact version
+        voiceDropdownEl = document.getElementById('voice-dropdown');
+
+        // Initialize focus trapping for modals
+        if (settingsModal && settingsModal.querySelector('.modal-content')) {
+            trapFocus(settingsModal.querySelector('.modal-content'));
+        }
+
+        // Event listeners
+        inputEl.addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.key === 'Enter') {
+                e.preventDefault();
+                if (e.shiftKey) {
+                    speakAll();
+                } else {
+                    addMessage();
+                }
+            } else if (e.ctrlKey && e.key === 'k') {
+                e.preventDefault();
+                clearMessages();
+            } else if (e.key === 'Escape') {
+                closeSettingsModal();
+                closeHelpModal();
+            }
+        });
+
+        // Real-time phoneme preview
+        inputEl.addEventListener('input', () => {
+            updatePhonemePreview();
+        });
+
+        // Global keyboard shortcuts for settings
+        document.addEventListener('keydown', (e) => {
+            // Ctrl+, or Ctrl+Shift+S for settings
+            if ((e.ctrlKey && e.key === ',') || (e.ctrlKey && e.shiftKey && e.key === 'S')) {
+                e.preventDefault();
+                toggleSettings();
+            }
+        });
+
+        // REMOVED: Export/Import settings - these elements were in the deleted modal
+
+        // Close modals when clicking outside
+        window.addEventListener('click', (e) => {
+            if (e.target === settingsModal) closeSettingsModal();
+            if (e.target === helpModal) closeHelpModal();
+        });
+
+        // Load voices for speech synthesis
+        if ('speechSynthesis' in window) {
+            speechSynthesis.onvoiceschanged = () => {
+                // Voices loaded
+            };
+        }
+
+        // Initialize
+        loadSettings();
+        renderMessages();
+        updatePhonemePreview(); // Initialize preview
+
+        // Expose functions globally for onclick handlers
+        window.speakSingleMessage = speakSingleMessage;
+        window.deleteMessage = deleteMessage;
+        window.toggleSettings = toggleSettings;
+        window.speakAll = speakAll;
+        window.clearMessages = clearMessages;
+        window.cycleDisplayMode = cycleDisplayMode;
+
+        // Dropdown change event listeners (these need addEventListener)
+        document.getElementById('display-mode-select').addEventListener('change', function(e) {
+            displayMode = e.target.value;
+            updateDisplayModeButton();
+            settings.displayMode = displayMode;
+
+            try {
+                localStorage.setItem('ipa-chat-settings', JSON.stringify(settings));
+                updateSettingsStatus();
+            } catch (error) {
+                console.error('Failed to save display mode:', error);
+            }
+
+            renderMessages();
+            showMessage(`Display mode: ${displayMode}`);
+        });
+
+        // Azure settings - auto-save on change
+        document.getElementById('azure-key').addEventListener('change', function(e) {
+            settings.azureKey = e.target.value;
+            try {
+                localStorage.setItem('ipa-chat-settings', JSON.stringify(settings));
+                updateSettingsStatus();
+            } catch (error) {
+                console.error('Failed to save Azure key:', error);
+            }
+        });
+
+        document.getElementById('azure-region').addEventListener('change', function(e) {
+            settings.azureRegion = e.target.value;
+            try {
+                localStorage.setItem('ipa-chat-settings', JSON.stringify(settings));
+                updateSettingsStatus();
+            } catch (error) {
+                console.error('Failed to save Azure region:', error);
+            }
+        });
+
+        // Phoneme file dropdown selector
+        document.getElementById('phoneme-file-selector').addEventListener('change', function(e) {
+            const filename = e.target.value;
+            if (filename) {
+                loadPhonemeFile(filename);
+            }
+        });
+
+        // Note: Input event listeners are already set up above in the main DOMContentLoaded block
+    });
+    </script>
+</body>
+</html>

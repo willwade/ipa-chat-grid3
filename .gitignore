@@ -1,0 +1,6 @@
+# No specific ignores needed for this static site
+# All files are meant to be deployed to GitHub Pages
+
+# Optionally ignore local server files if you create any
+.DS_Store
+Thumbs.db
