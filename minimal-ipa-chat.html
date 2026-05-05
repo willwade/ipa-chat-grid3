@@ -903,6 +903,10 @@
                             <span>Auto-clear on/off</span>
                         </div>
                         <div class="shortcut-item">
+                            <kbd>Ctrl+I</kbd>
+                            <span>Word lookup on/off</span>
+                        </div>
+                        <div class="shortcut-item">
                             <kbd>🖼️</kbd>
                             <span>Display mode</span>
                         </div>
@@ -940,6 +944,9 @@
                 </div>
                 <div id="phoneme-status">No phonemes loaded</div>
             </div>
+
+            <!-- IPA word suggestions (small links for Grid 3 to scan) -->
+            <div id="ipa-suggestions" style="display:none; padding:2px 4px; font-size:0.65rem; background:#f0fdf4; border-top:1px solid #bbf7d0; color:#166534; min-height:0; overflow:hidden;"></div>
         </div>
     </div>
 
@@ -966,6 +973,7 @@
                     <strong>Ctrl+P</strong> - Toggle speak partial words<br>
                     <strong>Ctrl+,</strong> - Open settings<br>
                 <strong>Ctrl+L</strong> - Toggle auto-clear after speaking<br>
+                <strong>Ctrl+I</strong> - Toggle IPA word lookup<br>
                     <strong>Escape</strong> - Close modals
                 </p>
 
@@ -1034,6 +1042,9 @@
         let babbleMode = false; // Speak each phoneme immediately, then delete it
         let speakPartialWord = false; // Speak accumulated text after each phoneme
         let autoClearAfterSpeak = true; // Auto-clear display after speaking
+        let ipaLookupEnabled = false; // Show IPA-to-text suggestions
+        const PHONEMIZE_URL = 'https://dolphin-app-62ztl.ondigitalocean.app';
+        let ipaLookupTimer = null;
 
         // DOM elements - will be initialized in DOMContentLoaded
         let historyEl, inputEl, errorMessageEl, speakingIndicatorEl;
@@ -1554,6 +1565,42 @@
         window.toggleAutoClear = function() {
             autoClearAfterSpeak = !autoClearAfterSpeak;
             showMessage(autoClearAfterSpeak ? 'Auto-clear ON' : 'Auto-clear OFF');
+        }
+
+        // Toggle IPA-to-text word lookup
+        window.toggleIpaLookup = function() {
+            ipaLookupEnabled = !ipaLookupEnabled;
+            const el = document.getElementById('ipa-suggestions');
+            if (!ipaLookupEnabled && el) {
+                el.style.display = 'none';
+                el.innerHTML = '';
+            }
+            showMessage(ipaLookupEnabled ? 'Word lookup ON' : 'Word lookup OFF');
+        }
+
+        // Debounced IPA-to-text lookup - fails silently
+        function scheduleIpaLookup(ipa) {
+            if (ipaLookupTimer) clearTimeout(ipaLookupTimer);
+            if (!ipaLookupEnabled || !ipa.trim()) return;
+
+            ipaLookupTimer = setTimeout(async () => {
+                const el = document.getElementById('ipa-suggestions');
+                try {
+                    const response = await fetch(`${PHONEMIZE_URL}/ipa-to-text`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ ipa: ipa.trim() })
+                    });
+                    if (!response.ok) return;
+                    const data = await response.json();
+                    if (data.text && el) {
+                        el.style.display = 'block';
+                        el.innerHTML = '<a href="#" onclick="return false" style="color:#166534;text-decoration:underline;font-size:0.65rem;">' + escapeHtml(data.text) + '</a>';
+                    }
+                } catch (e) {
+                    // Fail silently - server may be down
+                }
+            }, 400);
         }
 
         // Process phoneme image file
@@ -2119,6 +2166,9 @@
         inputEl.addEventListener('input', async () => {
             updatePhonemePreview();
 
+            // IPA-to-text lookup (fails silently)
+            scheduleIpaLookup(inputEl.value);
+
             // Handle AAC modes - REQUIRE Azure TTS
             const currentValue = inputEl.value;
 
@@ -2169,6 +2219,11 @@
             if (e.ctrlKey && e.key === 'l') {
                 e.preventDefault();
                 toggleAutoClear();
+            }
+            // Ctrl+I for toggle IPA word lookup
+            if (e.ctrlKey && e.key === 'i') {
+                e.preventDefault();
+                toggleIpaLookup();
             }
         });
 
@@ -2286,6 +2341,8 @@
         window.cycleDisplayMode = cycleDisplayMode;
         window.toggleBabbleMode = toggleBabbleMode;
         window.togglePartialWord = togglePartialWord;
+        window.toggleAutoClear = toggleAutoClear;
+        window.toggleIpaLookup = toggleIpaLookup;
         window.speakCurrentInput = speakCurrentInput;
 
         // Grid 3: Auto-focus hidden input and handle clicks on preview area
