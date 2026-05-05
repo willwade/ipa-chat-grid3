@@ -731,6 +731,9 @@
                 <h1 class="title">IPA Chat</h1>
                 <div class="button-group">
                     <button class="button primary" id="speak-all-btn" onclick="speakAll()">🔊</button>
+                    <button class="button" id="speak-input-btn" onclick="speakCurrentInput()" title="Speak current input">🎤</button>
+                    <button class="button" id="babble-mode-btn" onclick="toggleBabbleMode()" title="Babble mode">👶</button>
+                    <button class="button" id="partial-word-btn" onclick="togglePartialWord()" title="Speak partial words">🔄</button>
                     <button class="button" id="clear-btn" onclick="clearMessages()">🗑️</button>
                     <button class="button" id="settings-toggle-btn" onclick="toggleSettings()">⚙️</button>
                     <button class="button" id="display-mode-btn" onclick="cycleDisplayMode()">🖼️</button>
@@ -815,9 +818,16 @@
                     <strong>Ctrl+Enter</strong> - Add message to history<br>
                     <strong>Ctrl+Shift+Enter</strong> - Speak all messages<br>
                     <strong>Ctrl+K</strong> - Clear all messages<br>
+                    <strong>Ctrl+B</strong> - Toggle babble mode (speak & delete)<br>
+                    <strong>Ctrl+P</strong> - Toggle speak partial words<br>
                     <strong>Ctrl+,</strong> - Open settings<br>
                     <strong>Escape</strong> - Close modals
                 </p>
+
+                <h3>AAC Modes</h3>
+                <p><strong>👶 Babble Mode (Ctrl+B):</strong> Speak each phoneme immediately, then delete it. Perfect for exploring sounds without building text!</p>
+                <p><strong>🔄 Speak Partial Words (Ctrl+P):</strong> Speak the accumulated word after each phoneme. Great for word building practice!</p>
+                <p><strong>🎤 Speak Button:</strong> Speak the current input content immediately.</p>
 
                 <h3>IPA Support</h3>
                 <p>Type IPA text directly (no slashes needed): <code>hələʊ</code> or <code>h æ t</code>. See live phoneme images as you type!</p>
@@ -872,6 +882,10 @@
         let previousFocusedElement = null;
         let phonemeImageMap = new Map(); // Maps IPA text to image paths
         let displayMode = 'both'; // 'text', 'images', 'both' - default to both for Grid 3
+
+        // AAC Mode toggles
+        let babbleMode = false; // Speak each phoneme immediately, then delete it
+        let speakPartialWord = false; // Speak accumulated text after each phoneme
 
         // DOM elements - will be initialized in DOMContentLoaded
         let historyEl, inputEl, errorMessageEl, speakingIndicatorEl;
@@ -1324,6 +1338,82 @@
 
             renderMessages(); // Re-render with new display mode
             showMessage(`Display mode: ${displayMode}`);
+        }
+
+        // Toggle babble mode - speak each phoneme immediately, then delete it
+        function toggleBabbleMode() {
+            babbleMode = !babbleMode;
+            const btn = document.getElementById('babble-mode-btn');
+            if (babbleMode) {
+                btn.classList.add('active');
+                showMessage('👶 Babble mode ON - Speak & delete each phoneme');
+                // Turn off conflicting modes
+                if (speakPartialWord) {
+                    togglePartialWord();
+                }
+            } else {
+                btn.classList.remove('active');
+                showMessage('Babble mode OFF');
+            }
+        }
+
+        // Toggle speak partial word - speak accumulated text after each phoneme
+        function togglePartialWord() {
+            speakPartialWord = !speakPartialWord;
+            const btn = document.getElementById('partial-word-btn');
+            if (speakPartialWord) {
+                btn.classList.add('active');
+                showMessage('🔄 Speak partial words ON');
+                // Turn off conflicting modes
+                if (babbleMode) {
+                    toggleBabbleMode();
+                }
+            } else {
+                btn.classList.remove('active');
+                showMessage('Speak partial words OFF');
+            }
+        }
+
+        // Speak the current input content
+        async function speakCurrentInput() {
+            const input = document.getElementById('input');
+            const text = input.value.trim();
+            if (!text) return;
+
+            try {
+                if (settings.azureKey) {
+                    // Use Azure TTS
+                    const response = await fetch(settings.phonemizeUrl + '/speak', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            text: text,
+                            voice: settings.voiceName,
+                            azureKey: settings.azureKey,
+                            azureRegion: settings.azureRegion
+                        })
+                    });
+
+                    if (response.ok) {
+                        const blob = await response.blob();
+                        const audio = new Audio(URL.createObjectURL(blob));
+                        audio.play();
+                    } else {
+                        throw new Error('Azure TTS failed');
+                    }
+                } else {
+                    // Use browser speech synthesis
+                    const utterance = new SpeechSynthesisUtterance(text);
+                    utterance.voice = speechSynthesis.getVoices().find(v => v.name.includes(settings.voiceName)) || null;
+                    speechSynthesis.speak(utterance);
+                }
+                showMessage(`🎤 Spoke: "${text}"`);
+            } catch (error) {
+                console.error('Failed to speak:', error);
+                showError('Failed to speak input');
+            }
         }
 
         // Process phoneme image file
@@ -1842,16 +1932,89 @@
         });
 
         // Real-time phoneme preview
-        inputEl.addEventListener('input', () => {
+        inputEl.addEventListener('input', async () => {
             updatePhonemePreview();
+
+            // Handle AAC modes
+            const currentValue = inputEl.value;
+
+            if (babbleMode && currentValue.length > 0) {
+                // Babble mode: Speak last character and delete it
+                const lastChar = currentValue.slice(-1);
+                inputEl.value = ''; // Clear input immediately
+
+                // Speak the phoneme
+                try {
+                    if (settings.azureKey) {
+                        // Use Azure TTS for single phoneme
+                        const response = await fetch(settings.phonemizeUrl + '/speak', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                text: lastChar,
+                                voice: settings.voiceName,
+                                azureKey: settings.azureKey,
+                                azureRegion: settings.azureRegion
+                            })
+                        });
+                        if (response.ok) {
+                            const blob = await response.blob();
+                            const audio = new Audio(URL.createObjectURL(blob));
+                            audio.play();
+                        }
+                    } else {
+                        // Use browser synthesis
+                        const utterance = new SpeechSynthesisUtterance(lastChar);
+                        speechSynthesis.speak(utterance);
+                    }
+                } catch (error) {
+                    console.error('Babble mode failed:', error);
+                }
+            } else if (speakPartialWord && currentValue.length > 0) {
+                // Speak partial word: Speak everything entered so far
+                try {
+                    if (settings.azureKey) {
+                        const response = await fetch(settings.phonemizeUrl + '/speak', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                text: currentValue,
+                                voice: settings.voiceName,
+                                azureKey: settings.azureKey,
+                                azureRegion: settings.azureRegion
+                            })
+                        });
+                        if (response.ok) {
+                            const blob = await response.blob();
+                            const audio = new Audio(URL.createObjectURL(blob));
+                            audio.play();
+                        }
+                    } else {
+                        const utterance = new SpeechSynthesisUtterance(currentValue);
+                        speechSynthesis.speak(utterance);
+                    }
+                } catch (error) {
+                    console.error('Speak partial word failed:', error);
+                }
+            }
         });
 
-        // Global keyboard shortcuts for settings
+        // Global keyboard shortcuts for settings and AAC modes
         document.addEventListener('keydown', (e) => {
             // Ctrl+, or Ctrl+Shift+S for settings
             if ((e.ctrlKey && e.key === ',') || (e.ctrlKey && e.shiftKey && e.key === 'S')) {
                 e.preventDefault();
                 toggleSettings();
+            }
+            // Ctrl+B for babble mode
+            if (e.ctrlKey && e.key === 'b') {
+                e.preventDefault();
+                toggleBabbleMode();
+            }
+            // Ctrl+P for speak partial word
+            if (e.ctrlKey && e.key === 'p') {
+                e.preventDefault();
+                togglePartialWord();
             }
         });
 
@@ -1882,6 +2045,9 @@
         window.speakAll = speakAll;
         window.clearMessages = clearMessages;
         window.cycleDisplayMode = cycleDisplayMode;
+        window.toggleBabbleMode = toggleBabbleMode;
+        window.togglePartialWord = togglePartialWord;
+        window.speakCurrentInput = speakCurrentInput;
 
         // Dropdown change event listeners (these need addEventListener)
         document.getElementById('display-mode-select').addEventListener('change', function(e) {
