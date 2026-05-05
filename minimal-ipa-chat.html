@@ -824,10 +824,11 @@
                     <strong>Escape</strong> - Close modals
                 </p>
 
-                <h3>AAC Modes</h3>
+                <h3>AAC Modes (Require Azure TTS)</h3>
                 <p><strong>👶 Babble Mode (Ctrl+B):</strong> Speak each phoneme immediately, then delete it. Perfect for exploring sounds without building text!</p>
                 <p><strong>🔄 Speak Partial Words (Ctrl+P):</strong> Speak the accumulated word after each phoneme. Great for word building practice!</p>
                 <p><strong>🎤 Speak Button:</strong> Speak the current input content immediately.</p>
+                <p><strong>⚠️ Note:</strong> AAC features require Azure TTS API key in settings. Browser speech synthesis cannot properly pronounce IPA phonemes.</p>
 
                 <h3>IPA Support</h3>
                 <p>Type IPA text directly (no slashes needed): <code>hələʊ</code> or <code>h æ t</code>. See live phoneme images as you type!</p>
@@ -863,7 +864,8 @@
                 <p><strong>Image Paths:</strong> Use relative paths from the HTML file location. Images will be loaded relative to the web app location.</p>
 
                 <h3>Configuration</h3>
-                <p>Click Settings to configure your Azure TTS API credentials and upload phoneme image files. Without credentials, the app will attempt to use browser speech synthesis.</p>
+                <p><strong>Azure TTS (Required for AAC modes):</strong> Click Settings to configure Azure TTS API credentials. AAC features (babble mode, speak partial words) require Azure TTS because browser speech synthesis cannot properly pronounce IPA phonemes.</p>
+                <p><strong>Basic Use:</strong> Without Azure TTS, you can still use phoneme images and text, but speaking features will be limited.</p>
             </div>
         </div>
     </div>
@@ -1342,6 +1344,11 @@
 
         // Toggle babble mode - speak each phoneme immediately, then delete it
         function toggleBabbleMode() {
+            if (!settings.azureKey) {
+                showError('👶 Babble mode requires Azure TTS - Please add API key in settings');
+                return;
+            }
+
             babbleMode = !babbleMode;
             const btn = document.getElementById('babble-mode-btn');
             if (babbleMode) {
@@ -1359,6 +1366,11 @@
 
         // Toggle speak partial word - speak accumulated text after each phoneme
         function togglePartialWord() {
+            if (!settings.azureKey) {
+                showError('🔄 Speak partial words requires Azure TTS - Please add API key in settings');
+                return;
+            }
+
             speakPartialWord = !speakPartialWord;
             const btn = document.getElementById('partial-word-btn');
             if (speakPartialWord) {
@@ -1380,39 +1392,36 @@
             const text = input.value.trim();
             if (!text) return;
 
-            try {
-                if (settings.azureKey) {
-                    // Use Azure TTS
-                    const response = await fetch(settings.phonemizeUrl + '/speak', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                            text: text,
-                            voice: settings.voiceName,
-                            azureKey: settings.azureKey,
-                            azureRegion: settings.azureRegion
-                        })
-                    });
+            if (!settings.azureKey) {
+                showError('🎤 AAC features require Azure TTS - Please add API key in settings');
+                return;
+            }
 
-                    if (response.ok) {
-                        const blob = await response.blob();
-                        const audio = new Audio(URL.createObjectURL(blob));
-                        audio.play();
-                    } else {
-                        throw new Error('Azure TTS failed');
-                    }
+            try {
+                const response = await fetch(settings.phonemizeUrl + '/speak', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        text: text,
+                        voice: settings.voiceName,
+                        azureKey: settings.azureKey,
+                        azureRegion: settings.azureRegion
+                    })
+                });
+
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const audio = new Audio(URL.createObjectURL(blob));
+                    audio.play();
+                    showMessage(`🎤 Spoke: "${text}"`);
                 } else {
-                    // Use browser speech synthesis
-                    const utterance = new SpeechSynthesisUtterance(text);
-                    utterance.voice = speechSynthesis.getVoices().find(v => v.name.includes(settings.voiceName)) || null;
-                    speechSynthesis.speak(utterance);
+                    throw new Error('Azure TTS request failed');
                 }
-                showMessage(`🎤 Spoke: "${text}"`);
             } catch (error) {
                 console.error('Failed to speak:', error);
-                showError('Failed to speak input');
+                showError('Failed to speak - Check Azure TTS settings');
             }
         }
 
@@ -1935,37 +1944,35 @@
         inputEl.addEventListener('input', async () => {
             updatePhonemePreview();
 
-            // Handle AAC modes
+            // Handle AAC modes - REQUIRE Azure TTS
             const currentValue = inputEl.value;
+
+            if (!settings.azureKey) {
+                // AAC modes don't work without Azure TTS
+                return;
+            }
 
             if (babbleMode && currentValue.length > 0) {
                 // Babble mode: Speak last character and delete it
                 const lastChar = currentValue.slice(-1);
                 inputEl.value = ''; // Clear input immediately
 
-                // Speak the phoneme
+                // Speak the phoneme using Azure TTS
                 try {
-                    if (settings.azureKey) {
-                        // Use Azure TTS for single phoneme
-                        const response = await fetch(settings.phonemizeUrl + '/speak', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                text: lastChar,
-                                voice: settings.voiceName,
-                                azureKey: settings.azureKey,
-                                azureRegion: settings.azureRegion
-                            })
-                        });
-                        if (response.ok) {
-                            const blob = await response.blob();
-                            const audio = new Audio(URL.createObjectURL(blob));
-                            audio.play();
-                        }
-                    } else {
-                        // Use browser synthesis
-                        const utterance = new SpeechSynthesisUtterance(lastChar);
-                        speechSynthesis.speak(utterance);
+                    const response = await fetch(settings.phonemizeUrl + '/speak', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            text: lastChar,
+                            voice: settings.voiceName,
+                            azureKey: settings.azureKey,
+                            azureRegion: settings.azureRegion
+                        })
+                    });
+                    if (response.ok) {
+                        const blob = await response.blob();
+                        const audio = new Audio(URL.createObjectURL(blob));
+                        audio.play();
                     }
                 } catch (error) {
                     console.error('Babble mode failed:', error);
@@ -1973,25 +1980,20 @@
             } else if (speakPartialWord && currentValue.length > 0) {
                 // Speak partial word: Speak everything entered so far
                 try {
-                    if (settings.azureKey) {
-                        const response = await fetch(settings.phonemizeUrl + '/speak', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                text: currentValue,
-                                voice: settings.voiceName,
-                                azureKey: settings.azureKey,
-                                azureRegion: settings.azureRegion
-                            })
-                        });
-                        if (response.ok) {
-                            const blob = await response.blob();
-                            const audio = new Audio(URL.createObjectURL(blob));
-                            audio.play();
-                        }
-                    } else {
-                        const utterance = new SpeechSynthesisUtterance(currentValue);
-                        speechSynthesis.speak(utterance);
+                    const response = await fetch(settings.phonemizeUrl + '/speak', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            text: currentValue,
+                            voice: settings.voiceName,
+                            azureKey: settings.azureKey,
+                            azureRegion: settings.azureRegion
+                        })
+                    });
+                    if (response.ok) {
+                        const blob = await response.blob();
+                        const audio = new Audio(URL.createObjectURL(blob));
+                        audio.play();
                     }
                 } catch (error) {
                     console.error('Speak partial word failed:', error);
